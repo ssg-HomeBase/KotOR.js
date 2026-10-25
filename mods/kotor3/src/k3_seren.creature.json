@@ -1,0 +1,18 @@
+{
+  "resref": "k3_seren",
+  "tag": "k3_seren",
+  "firstName": "Seren",
+  "lastName": "Vaux",
+  "comment": "KOTOR III (fan): courier who opens the story on Citadel Station. Uses the player's own KOTOR II body model by appearance.2da row number only.",
+  "conversation": "k3_seren",
+  "appearanceRow": 185,
+  "appearanceNote": "appearance.2da row 185 in the player's KOTOR II (a female commoner body).",
+  "gender": 1,
+  "race": 6,
+  "factionId": 5,
+  "hitPoints": 20,
+  "abilities": { "Str": 10, "Dex": 12, "Con": 10, "Int": 14, "Wis": 12, "Cha": 14 },
+  "classId": 0,
+  "classLevel": 1,
+  "plot": true
+}

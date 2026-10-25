@@ -1,0 +1,20 @@
+{
+  "key": "kotor3",
+  "name": "KOTOR III (fan) Phase 1 prototype",
+  "baseGame": "tsl",
+  "startModule": "201tel",
+  "files": [
+    "k3_seren.utc",
+    "k3_seren.dlg"
+  ],
+  "creatures": [
+    {
+      "area": "201tel",
+      "templateResRef": "k3_seren",
+      "x": -11.9,
+      "y": 9.0,
+      "z": 13.14,
+      "facing": 124
+    }
+  ]
+}
