@@ -24,6 +24,7 @@ research/*
 !research/R9_LOG.md
 !research/TEST_LOG.md
 !research/TEST_LOG_PHASE2.md
+!research/COOP_SPIKE.md
 .history/
 /extensions/
 .npm-cache/

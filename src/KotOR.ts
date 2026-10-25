@@ -7,6 +7,8 @@ export * from "@/module";
 export * from "@/gui";
 export * from "@/GameState";
 export * from "@/managers";
+// KOTOR III Phase 2 co-op spike (M3)
+export * from "@/coop/CoopSession";
 
 export * from "@/utility/binary/BinaryReader";
 export * from "@/utility/binary/BinaryWriter";

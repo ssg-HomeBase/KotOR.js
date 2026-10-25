@@ -1,0 +1,25 @@
+{
+  "resref": "k3_coop_peer",
+  "tag": "k3_coop_peer",
+  "firstName": "Other player",
+  "lastName": "",
+  "comment": "KOTOR III (fan) co-op spike: stands in for the other player in a two-window session. Uses the player's own KOTOR II body model by appearance.2da row number only.",
+  "conversation": "",
+  "appearanceRow": 190,
+  "appearanceNote": "appearance.2da row 190 in the player's KOTOR II (Commoner_Mal_White_01_A).",
+  "gender": 0,
+  "race": 6,
+  "factionId": 5,
+  "hitPoints": 20,
+  "abilities": {
+    "Str": 10,
+    "Dex": 12,
+    "Con": 10,
+    "Int": 14,
+    "Wis": 12,
+    "Cha": 14
+  },
+  "classId": 0,
+  "classLevel": 1,
+  "plot": true
+}
