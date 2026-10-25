@@ -16,6 +16,7 @@ debug.log
 docs/*
 !docs/STORY_BIBLE.md
 !docs/FEASIBILITY.md
+!docs/PHASE2.md
 coverage/
 scratch/
 research/*
