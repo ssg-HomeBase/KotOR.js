@@ -1,0 +1,3 @@
+# Windows scripts must keep CRLF line endings, whatever the clone settings.
+*.cmd text eol=crlf
+*.bat text eol=crlf

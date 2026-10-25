@@ -1,6 +1,6 @@
 @echo off
 rem KOTOR III (fan), local play: double-click this file.
-rem It builds and serves KotOR.js on this PC at http://localhost:8080 and opens the launcher in Chrome.
+rem It builds and serves KotOR.js at http://127.0.0.1:8080 (reachable from this PC only) and opens the launcher in Chrome.
 rem Close this window to stop the local server. Nothing is uploaded anywhere.
 title KOTOR III (fan) local server - close this window to stop
 cd /d "%~dp0\..\.."
@@ -15,5 +15,5 @@ if not exist node_modules (
   call npm install
 )
 echo Starting the local server. Chrome opens in about 30 seconds.
-start "" cmd /c "timeout /t 30 >nul & start "" chrome "http://localhost:8080/launcher/""
-call npm run dev
+start "" cmd /c "timeout /t 30 >nul & start "" chrome "http://127.0.0.1:8080/launcher/""
+call npm run dev -- --host 127.0.0.1

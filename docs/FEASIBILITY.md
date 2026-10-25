@@ -4,7 +4,7 @@ Date: 2026-10-24. Branch `kotor3-phase1` of ssg-HomeBase/KotOR.js (base commit `
 
 ## Verdict
 
-**Feasible.** A KOTOR III fan sequel can be built as a mod that runs on top of each player's own KOTOR II in KotOR.js, in the browser or the KotOR.js desktop app, without shipping any game file. Phase 1 proved the full path once: a "KOTOR III (fan)" entry loads the player's KOTOR II, adds the mod's own files, places a new NPC in an existing KOTOR II area, and plays a new 14-node branching dialogue to the end (research/TEST_LOG.md, run 10: PASS). The biggest costs of a full sequel are writing, quests and new areas, not the engine.
+**Feasible.** A KOTOR III fan sequel can be built as a mod that runs on top of each player's own KOTOR II in KotOR.js, in the browser or the KotOR.js desktop app, without shipping any game file. Phase 1 proved the full path once: a "KOTOR III (fan)" entry loads the player's KOTOR II, adds the mod's own files, places a new NPC in an existing KOTOR II area, and plays a new 14-node branching dialogue to the end (research/TEST_LOG.md, run 12: PASS). The biggest costs of a full sequel are writing, quests and new areas, not the engine.
 
 Not done in Phase 1:
 - **No hosted preview (fallback F5).** The Vercel CLI login needs a click in the browser; three login codes (20:09, 20:21 and 20:41 EDT) expired without confirmation, so nothing was deployed. Cam plays it locally with a double-click instead (checklist below).
@@ -15,11 +15,11 @@ Not done in Phase 1:
 
 | Item | Evidence |
 |---|---|
-| Launcher entry "KOTOR III (fan)": KOTOR II base game plus the kotor3 mod | `src/apps/launcher/profiles/kotor3.ts`; TEST_LOG run 10 (desktop app) and the web check (browser) |
-| Mod loader: the mod's files load after the game's own Override folder and win name clashes | `src/managers/ModManager.ts`; TEST_LOG run 10 "mod loaded: k3_seren.utc, k3_seren.dlg" |
-| New NPC placed in an existing KOTOR II area without editing any game file | `mods/kotor3/manifest.json` (area `201tel`); hook in `src/module/ModuleArea.ts`; run 10: Seren at (-11.9, 9.0, 13.14), body model loaded, 3.03 m from the player |
+| Launcher entry "KOTOR III (fan)": KOTOR II base game plus the kotor3 mod | `src/apps/launcher/profiles/kotor3.ts`; TEST_LOG run 12 (desktop app) and the web check (browser) |
+| Mod loader: the mod's files load after the game's own Override folder and win name clashes | `src/managers/ModManager.ts`; TEST_LOG run 12 "mod loaded: k3_seren.utc, k3_seren.dlg" |
+| New NPC placed in an existing KOTOR II area without editing any game file | `mods/kotor3/manifest.json` (area `201tel`); hook in `src/module/ModuleArea.ts`; run 12: Seren at (-11.9, 9.0, 13.14), body model loaded, 3.03 m from the player |
 | New NPC and dialogue authored as game-format files | `mods/kotor3/k3_seren.utc`, `k3_seren.dlg`, built from readable JSON by `scripts/kotor3/build-mod.ts` with KotOR.js's own GFF writer |
-| Dialogue: 7 entries + 7 replies = 14 nodes, 2 choices, every node played | `scripts/kotor3/verify-mod.ts` (parse-back, node count by script); run 10 coverage E0 to E6, R0 to R6 |
+| Dialogue: 7 entries + 7 replies = 14 nodes, 2 choices, every node played | `scripts/kotor3/verify-mod.ts` (parse-back, node count by script); run 12 coverage E0 to E6, R0 to R6 |
 | Uses the player's own body models by reference only (appearance row 185) | `mods/kotor3/src/k3_seren.creature.json` |
 | New game can start in the mod's area | `startModule` in the manifest; `src/game/tsl/menu/CharGenQuickPanel.ts` (not exercised by the automated test) |
 | No game data in the repo or build | `scripts/scan-no-game-files.mjs`: PASS on the branch and on the web build output; negative checks caught copied and extracted game data |
@@ -41,8 +41,11 @@ Line numbers are in upstream KotOR.js at commit `002dfe03` unless marked "branch
 | 9 | Seen in the desktop app: the intro movies were still queued when the first area loaded and played inside the area load; one cannot be skipped, so a window in the background stayed in movie mode. | `src/GameState.ts:1065` (movie queue during module load); `src/managers/VideoManager.ts:271` (unskippable movies) | Open; may only affect background windows |
 | 10 | A fresh start logs errors for a missing faction file and a missing item template for the generated default player. | `src/managers/FactionManager.ts:272`; `src/module/ModuleItem.ts:506` | Open; no visible effect in the test |
 | 11 | **The browser version cannot open a game installed in the default Steam folder.** Chrome blocks websites from opening any folder under `C:\Program Files` or `C:\Program Files (x86)`, which is where Steam installs KOTOR II by default (it is there on this PC). KotOR.js's "Grant Access" box does not explain this. The desktop app is not affected. | Chrome: `chrome/browser/file_system_access/chrome_file_system_access_permission_context.cc:501` to `:506` (https://raw.githubusercontent.com/chromium/chromium/main/chrome/browser/file_system_access/chrome_file_system_access_permission_context.cc, read 2026-10-24); KotOR.js: `src/apps/game/components/modal-grant-access/modalGrantAccess.tsx:21` | **Open.** Workaround in the checklist: copy the game folder (4.6 GB) to `C:\Games`. Phase 2: explain it in the Grant Access box, or ship the desktop app. |
+| 12 | The GFF writer stores an empty list as offset 0xFFFFFFFF. KOTOR II's own DLG and UTC files never do this: they point empty lists at a zero-count entry. KotOR.js reads both, but stricter readers and possibly other KOTOR tools reject the 0xFFFFFFFF form, so files written with KotOR.js (including this mod's first build) may not load outside KotOR.js. | `src/resource/GFFObject.ts:995` | **Fixed on this branch** (write an offset to a zero-count entry). The mod files were rebuilt (TEST_LOG run 12). |
 
-Not a KotOR.js bug, but a design issue for the mod: when a new game starts on the Citadel Station docks (`201tel`), KOTOR II's own arrival conversation for that area starts too (TEST_LOG run 10, "ended an area conversation"). Phase 2 needs a way to switch off base-game plot scripts in areas the sequel reuses.
+## Design issue for the mod (not a KotOR.js bug)
+
+When a new game starts on the Citadel Station docks (`201tel`), KOTOR II's own arrival conversation for that area starts too (TEST_LOG run 12, "ended an area conversation"). Phase 2 needs a way to switch off base-game plot scripts in areas the sequel reuses.
 
 ## Engine gaps for a full sequel
 

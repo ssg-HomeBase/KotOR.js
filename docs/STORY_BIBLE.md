@@ -3,7 +3,7 @@
 A non-commercial fan project that runs as a mod on top of each player's own copy of KOTOR II. Not affiliated with or endorsed by Lucasfilm, Disney, Obsidian, BioWare or Aspyr. All writing here is original; no game dialogue is quoted.
 
 How to read this file:
-- **Lore** lines are facts from published Star Wars sources, paraphrased, each followed by its source URL and the date it was read. Unless marked otherwise, they are **Star Wars Legends** continuity (the continuity KOTOR I and II belong to).
+- **Lore** lines are facts from published Star Wars sources, paraphrased, each followed by its source URL and the date it was read. Unless marked otherwise, they are **Star Wars Legends** continuity, which Wookieepedia files KOTOR II under (https://starwars.fandom.com/wiki/Star_Wars:_Knights_of_the_Old_Republic_II:_The_Sith_Lords, seen 2026-10-24).
 - **Fan invention** lines are this project's own story choices. They are not lore and need no source.
 - Wookieepedia article pages block automated readers, so their text was read through the Fandom API (`https://starwars.fandom.com/api.php?action=parse&page=<Title>&prop=wikitext&format=json`, HTTP 200). Each citation gives the normal article URL.
 
@@ -24,14 +24,14 @@ How to read this file:
 10. Surik's trained Jedi go on to help rebuild the Order, and her spirit stays with the imprisoned Revan. (https://starwars.fandom.com/wiki/Meetra_Surik, seen 2026-10-24)
 11. The Sith Emperor, once called Vitiate, drained a whole world (Nathema) in a ritual and led the surviving Sith to Dromund Kaas. (https://starwars.fandom.com/wiki/Vitiate, seen 2026-10-24)
 12. The "True Sith" Empire was founded by Sith exiles who fled into the Unknown Regions after the Great Hyperspace War, settled Dromund Kaas, and rebuilt in secret for over a thousand years before invading the Republic roughly three centuries after Revan's time (the Great Galactic War of *Star Wars: The Old Republic*). (https://starwars.fandom.com/wiki/True_Sith and https://starwars.fandom.com/wiki/Dromund_Kaas/Legends, seen 2026-10-24)
-13. In current Disney canon none of this exists; Revan survives only as an ancient name chanted by Sith Eternal cultists. (https://starwars.fandom.com/wiki/Revan, seen 2026-10-24)
+13. In current Disney canon none of this exists; Revan survives only as an ancient Sith Lord whose name Sith Eternal cultists chant and whose name the Sith Eternal "Revan Legion" carries. (https://starwars.fandom.com/wiki/Revan, seen 2026-10-24)
 
 ## 3. What the original developers planned (real world)
 
 14. Chris Avellone said a third KOTOR was in pre-production at Obsidian, would have featured Revan more and had the player, as the Exile, track him down; LucasArts never moved it forward. (https://www.engadget.com/2013-08-01-knights-of-the-old-republic-3-was-in-pre-production-at-obsidian.html, seen 2026-10-24)
 15. In 2019 Avellone said the series was meant as a trilogy, with KOTOR 3 following Revan's trail to ancient Sith Lords far more powerful than the familiar ones. (https://steamcommunity.com/news/post/3763229740650005667, PC Gamer via Steam News, seen 2026-10-24)
-16. LucasArts confirmed a KOTOR follow-up in 2007; BioWare's MMO *The Old Republic*, announced in 2008, took its place. (https://starwars.fandom.com/wiki/Star_Wars:_Knights_of_the_Old_Republic_III, seen 2026-10-24)
-17. Fans have long imagined their own KOTOR III; Deadlystream thread 7341 (2019) is one solo concept, built on KOTOR II and never released. (https://deadlystream.com/topic/7341-knights-of-the-old-republic-iii, seen 2026-10-24)
+16. LucasArts confirmed a KOTOR follow-up in 2007, but no KOTOR III was released; BioWare's MMO *The Old Republic* was announced in 2008. (https://starwars.fandom.com/wiki/Star_Wars:_Knights_of_the_Old_Republic_III, seen 2026-10-24)
+17. Fans have long imagined their own KOTOR III; Deadlystream thread 7341 (2019) is one solo concept built on KOTOR II; its posts run from 30 August to 5 September 2019, and no release was found. (https://deadlystream.com/topic/7341-knights-of-the-old-republic-iii, seen 2026-10-24)
 
 Design consequence (fan invention): to stay consistent with lore 9 to 12, this sequel does not defeat the Emperor, rescue Revan or prevent the Great Galactic War. It is about what the Exile left behind and what one crew can do with it.
 
@@ -62,7 +62,7 @@ Design consequence (fan invention): to stay consistent with lore 9 to 12, this s
 
 ### Companions
 
-Seren Vaux, Tamsin Rho, Rhea Vex, VX-9 and Ashkar join the party (five companions, against nine to ten in KOTOR II, to keep writing and voice scope realistic for a fan team).
+Seren Vaux, Tamsin Rho, Rhea Vex, VX-9 and Ashkar join the party (five companions, to keep writing and voice scope realistic for a fan team).
 
 ### Planets
 

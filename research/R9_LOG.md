@@ -28,7 +28,7 @@ URL status: **[200]** opened with curl, HTTP 200. **[403]** blocked to curl, fac
 | 18 | `DevilutionX web browser play diablo own DIABDAT.MPQ` | search | 2026-10-24 | PC Gamer article; d07RiV/diabloweb |
 | 19 | `OpenMW web browser port play Morrowind in browser own data files` | search | 2026-10-24 | PC Gamer, 2026-07-28: openmw-web |
 | 20 | `"Revenge of Revan" KOTOR 2 mod episode 2 status` | search | 2026-10-24 | DS file 2707; no Episode 2 release found |
-| 21 | Engine code paths for this build: `src/module/ModuleArea.ts` (GIT creature load), `src/module/ModuleCreature.ts` (UTC fields), `src/resource/DLGObject.ts` and `DLGNode.ts` (DLG fields), `src/managers/CutsceneManager.ts` (conversation flow), `src/controls/IngameControls.ts` (number keys pick replies), `src/managers/CheatConsoleManager.ts` (warp) | read | 2026-10-24 | Used to design the mod loader and the test (item 4) |
+| 21 | Engine code paths for this build: `src/module/ModuleArea.ts` (GIT creature load), `src/module/ModuleCreature.ts` (UTC fields), `src/resource/DLGObject.ts` and `DLGNode.ts` (DLG fields), `src/managers/CutsceneManager.ts` (conversation flow), `src/controls/IngameControls.ts` and `src/controls/KeyMapper.ts` (reply keys: the number-key bindings are commented out at KeyMapper.ts:511, so replies are clicked), `src/managers/CheatConsoleManager.ts` (warp) | read | 2026-10-24 | Used to design the mod loader and the test (item 4) |
 | 22 | Lore queries for the story bible (Wookieepedia Meetra Surik, Revan, True Sith; Avellone KOTOR 3 interviews; Kotaku 2009) | search, curl | 2026-10-24 | Listed in docs/STORY_BIBLE.md sources; the 2009 Kotaku interview itself was not found |
 
 ## 1. Existing fan KOTOR III projects
