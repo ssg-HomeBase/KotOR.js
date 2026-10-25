@@ -31,7 +31,7 @@ How to read this file:
 14. Chris Avellone said a third KOTOR was in pre-production at Obsidian, would have featured Revan more and had the player, as the Exile, track him down; LucasArts never moved it forward. (https://www.engadget.com/2013-08-01-knights-of-the-old-republic-3-was-in-pre-production-at-obsidian.html, seen 2026-10-24)
 15. In 2019 Avellone said the series was meant as a trilogy, with KOTOR 3 following Revan's trail to ancient Sith Lords far more powerful than the familiar ones. (https://steamcommunity.com/news/post/3763229740650005667, PC Gamer via Steam News, seen 2026-10-24)
 16. LucasArts confirmed a KOTOR follow-up in 2007, but no KOTOR III was released; BioWare's MMO *The Old Republic* was announced in 2008. (https://starwars.fandom.com/wiki/Star_Wars:_Knights_of_the_Old_Republic_III, seen 2026-10-24)
-17. Fans have long imagined their own KOTOR III; Deadlystream thread 7341 (2019) is one solo concept built on KOTOR II; its posts run from 30 August to 5 September 2019, and no release was found. (https://deadlystream.com/topic/7341-knights-of-the-old-republic-iii, seen 2026-10-24)
+17. Fans have long imagined their own KOTOR III; Deadlystream thread 7341 (2019) is one solo concept built on KOTOR II; its posts, over three pages, run from 30 August to 26 September 2019, and no release was found. (https://deadlystream.com/topic/7341-knights-of-the-old-republic-iii, seen 2026-10-24)
 
 Design consequence (fan invention): to stay consistent with lore 9 to 12, this sequel does not defeat the Emperor, rescue Revan or prevent the Great Galactic War. It is about what the Exile left behind and what one crew can do with it.
 

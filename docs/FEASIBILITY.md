@@ -106,7 +106,7 @@ Each player must own KOTOR II and run the same mod version; the co-op layer neve
 
 1. Engine first (about 300 hours): fix item 1 (keep saves and temporary state out of the game folder), explain item 11 in the Grant Access box (or ship the desktop app), number keys (item 3), a headless NWScript build step with the in-tree compiler, per-area switch-off of base-game plot scripts, and mod state in saves.
 2. Content: Citadel Station prologue and the first Act I planet (Nar Shaddaa or Dantooine) from the story bible: about 10 conversations, 3 quests, 2 companions (Seren and Rhea), all in reused areas.
-3. Hosting: the protected Vercel preview (needs Cam's one-time login click), so testers play by link.
+3. Hosting: the protected Vercel preview (needs Cam's one-time login click), so testers play by link. Deploy a production build (`npm run webpack:prod`), scan that output with the guard, and leave out the upstream launcher images that are game screenshots (`src/assets/launcher/images/forge_screen_01.jpg` to `_03.jpg`, `kotor_forge.jpg`, and `images/screenshots/K1-Screen-*.jpg`, `K2-Screen-*.jpg`, all from upstream KotOR.js, not from this branch). The guard's hash check cannot recognize screenshots, so this needs an explicit exclude list.
 4. Co-op spike (2 weeks, separate branch): two browsers see each other walk around one area. Go or no-go on the full co-op estimate after it.
 5. Same guard: the scan and pre-push hook stay on; every release is checked against the player's game folder.
 
