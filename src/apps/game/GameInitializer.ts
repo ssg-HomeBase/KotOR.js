@@ -258,6 +258,11 @@ export class GameInitializer {
       GameInitializer.LoadTexturePacks()
     ];
     await Promise.all(promises);
+    // Fan mod files load after the game's Override folder so the mod wins on name clashes.
+    if(KotOR.ModManager.activeModKey){
+      GameInitializer.SetLoadingMessage("Loading Mod Files");
+      await KotOR.ModManager.LoadActiveMod();
+    }
     const nonBlockingPromises = [
       GameInitializer.LoadGameAudioResources('streammusic'), 
       GameInitializer.LoadGameAudioResources('streamsounds'), 

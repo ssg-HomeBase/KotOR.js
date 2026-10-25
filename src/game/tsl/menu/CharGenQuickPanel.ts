@@ -2,6 +2,7 @@ import { CurrentGame } from "@/engine/CurrentGame";
 import { GameState } from "@/GameState";
 import type { GUILabel, GUIButton, GUIControl } from "@/gui";
 import { CharGenQuickPanel as K1_CharGenQuickPanel } from "@/game/kotor/KOTOR";
+import { ModManager } from "@/managers/ModManager";
 
 /**
  * CharGenQuickPanel class.
@@ -56,7 +57,8 @@ export class CharGenQuickPanel extends K1_CharGenQuickPanel {
         GameState.PartyManager.ActualPlayerTemplate = GameState.PartyManager.PlayerTemplate;
         GameState.PartyManager.AddPortraitToOrder(GameState.CharGenManager.selectedCreature.getPortraitResRef());
         CurrentGame.InitGameInProgressFolder(true).then( () => {
-          GameState.LoadModule('001EBO');
+          // A fan mod (KOTOR III) can start its new game in its own opening area.
+          GameState.LoadModule(ModManager.manifest?.startModule || '001EBO');
         });
       });
 
