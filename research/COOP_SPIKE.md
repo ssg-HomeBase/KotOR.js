@@ -34,12 +34,12 @@ Phase 1 estimated about 1,400 person-hours for two-player online co-op (docs/FEA
 
 | # | Finding | File and line |
 |---|---|---|
-| 1 | KotOR.js has no networking layer; the spike adds one class beside the engine and exposes it as `KotOR.CoopSession`. Nothing in the engine knows another player exists (no authority, no object ids shared between windows). | `src/coop/CoopSession.ts`; `src/KotOR.ts` (export) |
-| 2 | Animation states are engine-internal numbers (`ModuleCreatureAnimState`, e.g. 10000 idle), so both players must run the same KotOR.js build. | `src/coop/CoopSession.ts`, `sendUpdate` (field `a`) |
+| 1 | KotOR.js has no networking layer; the spike adds one class beside the engine and exposes it as `KotOR.CoopSession`. Nothing in the engine knows another player exists (no authority, no object ids shared between windows). | `src/coop/CoopSession.ts:36` (class); `src/KotOR.ts:11` (export) |
+| 2 | Animation states are engine-internal numbers (`ModuleCreatureAnimState`, e.g. 10000 idle), so both players must run the same KotOR.js build. | `src/coop/CoopSession.ts:113` (field `a` in `sendUpdate`) |
 | 3 | The remote player is drawn without collision, so the local player can walk through it; real co-op needs it to be a proper party creature. | `src/coop/CoopSession.ts:150` |
-| 4 | Positions are applied as they arrive (10 per second) with no interpolation, so a running copy moves in steps of about half a metre. | `src/coop/CoopSession.ts`, `receive` |
+| 4 | Positions are applied as they arrive (10 per second) with no interpolation, so a running copy moves in steps of about half a metre. | `src/coop/CoopSession.ts:131` (`receive` sets the position directly) |
 | 5 | Only localhost was tried: no STUN/TURN, no hosted signaling, so two players on different networks cannot connect yet. | `src/coop/CoopSession.ts:58` (`iceServers: []`); `scripts/kotor3/coop-signal.mjs:22` (127.0.0.1 only) |
-| 6 | The spike is started from the console or a test (`KotOR.CoopSession.start`); there is no menu for it. | `src/coop/CoopSession.ts` |
+| 6 | The spike is started from the console or a test (`KotOR.CoopSession.start`); there is no menu for it. | `src/coop/CoopSession.ts:53` (`start`) |
 
 ## How it was tested
 
