@@ -84,3 +84,44 @@ Verdict: **reference only.** Both confirm the model this project uses: the page 
 | Resource priority | KotOR.js OVERRIDE cache scope | `src/loaders/ResourceLoader.ts:203` | GPL-3.0 |
 | NPC placement data shape | GIT "Creature List" entry, as in TSLPatcher/HoloPatcher GFFList patches | PyKotor wiki TSLPatcher-GFFList-Syntax | format reference only |
 | Bring-your-own-files model | KotOR.js folder picker (File System Access API) | upstream KotOR.js | GPL-3.0 |
+
+---
+
+# Phase 2 (2026-10-25)
+
+Same method as Phase 1: KotOR.js's own code first, then the KOTOR modding community, then MDN and vendor docs. Pages were found with the search tool and read with `curl` from the shell (no web fetch tool). Nothing was installed.
+
+## Searches run
+
+| # | Query or check | Tool | Date | Result |
+|---|---|---|---|---|
+| 23 | Writes into the game folder: `readwrite`, `GameFileSystem.writeFile/mkdir/rmdir/unlink`, `createWritable`, `fs.write*` across `src/` (Forge excluded) | grep | 2026-10-25 | Writers found: `src/engine/CurrentGame.ts` (gameinprogress), `src/engine/SaveGame.ts` (Saves), `src/engine/INIConfig.ts:150` (swkotor2.ini), `src/controls/IngameControls.ts:151` (screenshots), resource `export()` helpers; permission requests in `src/utility/GameFileSystem.ts`, `src/apps/game/states/AppState.ts:305`, `modalGrantAccess.tsx:21` |
+| 24 | Browser storage already in the repo: `navigator.storage.getDirectory` | grep | 2026-10-25 | `src/apps/forge/virtual/VirtualProjectFolder.ts:163` (Forge's origin private file system). Adopted for saves in the browser |
+| 25 | Electron app data folder: `getPath`, preload bridge | grep, read | 2026-10-25 | `src/electron/preload.ts` exposes `fs`, `dialog`, `electron`; no user-data path yet. Electron `app.getPath('userData')`: https://www.electronjs.org/docs/latest/api/app [200] |
+| 26 | `MDN showDirectoryPicker mode read FileSystemHandle requestPermission read-only` | search, curl | 2026-10-25 | https://developer.mozilla.org/en-US/docs/Web/API/FileSystemHandle/requestPermission [200]: modes "read" or "readwrite"; https://developer.mozilla.org/en-US/docs/Web/API/Window/showDirectoryPicker [200]; https://developer.mozilla.org/en-US/docs/Web/API/StorageManager/getDirectory [200] |
+| 27 | Number keys in conversations: `Dialog1`..`Dialog9`, `selectReplyAtIndex` | grep, read | 2026-10-25 | Processors exist (`src/controls/IngameControls.ts:552`); default bindings commented out (`src/controls/KeyMapper.ts:511-520`) |
+| 28 | Party, journal and global code: `PartyManager.ts`, `JournalManager.ts`, `GlobalVariableManager.ts`, `SaveGame.ts`, `NWScriptDefK1.ts`/`NWScriptDefK2.ts` | read | 2026-10-25 | Globals saved by name (`SaveGame.ts:977`); journal and party in PARTYTABLE (`PartyManager.ts:336`); K2 routines inherit K1 implementations by id (`NWScriptDefK2.ts:6271`). Bug: `JournalManager.AddJournalQuestEntry` never adds a new entry |
+| 29 | `KOTOR 2 TSL add new party member AddAvailableNPCByTemplate npc slot modding tutorial deadlystream` | search, curl | 2026-10-25 | https://deadlystream.com/topic/4435-editing-the-party-configuration-k1-and-k2/ [200] (SpawnAvailableNPC + AddPartyMember by party-table slot; KOTOR II party globals must be the mod's own); https://deadlystream.com/topic/8711-recruit-function-script [200] (`AddAvailableNPCByTemplate(slot, template)` then the party screen) |
+| 30 | `KOTOR modding add new journal quest global.jrl AddJournalQuestEntry without overwriting game file` | search, curl | 2026-10-25 | https://deadlystream.com/topic/3811-merchant-and-quest-mod/ [200] and https://deadlystream.com/topic/2830-jrledit-the-graphica-journal-editor/page/2/ [200]: community mods edit global.jrl and plot.2da (Override or patcher); nothing found on adding quests without editing the file |
+| 31 | `KOTOR TSL globalcat.2da add new global variable mod TSLPatcher` | search | 2026-10-25 | Mods add globalcat.2da rows with TSLPatcher (e.g. https://www.nexusmods.com/kotor2/mods/1312 [search]); no in-memory method found |
+| 32 | `PyKotor wiki TSLPatcher 2DAList syntax globalcat` | search | 2026-10-25 | Nothing found beyond HoloPatcher as TSLPatcher's successor (https://deadlystream.com/topic/9807-toolholopatcher [search]) |
+| 33 | `KOTOR mod disable module OnEnter script area cutscene override .are OnEnter deadlystream` | search, curl | 2026-10-25 | https://deadlystream.com/topic/7017-dialogue-upon-entering-module [200]: entry scenes come from the module's OnEnter or from a trigger at the entry point (script in the UTT, placement in the GIT); both need re-entry handling |
+| 34 | `KOTOR TSL party member limit npc.2da 12 slots replace companion mod` | search | 2026-10-25 | Nothing found on adding party slots; mods reuse existing slots (PartySwap example, https://deadlystream.com/files/file/2213-kotor-2-light-side-female-saves-with-tslrcm-and-partyswap [search]) |
+| 35 | `WebRTC RTCDataChannel signaling with WebSocket server node ws example two peers same machine` | search, curl | 2026-10-25 | Pattern: a WebSocket server only relays offer, answer and ICE messages; data then flows peer to peer (https://blog.logrocket.com/webrtc-signaling-websocket-node-js [search]); MDN https://developer.mozilla.org/en-US/docs/Web/API/RTCDataChannel [200], https://developer.mozilla.org/en-US/docs/Web/API/WebRTC_API/Signaling_and_video_calling [200] |
+| 36 | GitHub API issue search `repo:KobaltBlu/KotOR.js` for `gameinprogress`, `save folder`, `multiplayer`, `journal` | curl | 2026-10-25 | 0, 0, 0 and 2 hits; PR 112 ("Port integrated gameplay improvements onto current upstream", draft, open, 294 files, touches save/load, party and journal) |
+| 37 | Arrival scene in `201tel`: Phase 1 console log | read | 2026-10-25 | `ModuleTrigger.onEnter 0 201Enter` then a conversation start: the scene is fired by the area's trigger tagged `201Enter` |
+| 38 | Vercel Deployment Protection, first deployment rule | curl | 2026-10-25 | https://vercel.com/docs/deployment-protection [200]: Standard Protection covers everything but production domains, All Deployments covers all and "is available on all plans"; https://vercel.com/docs/deployments/environments [200]: a project's first deployment is always production, even with `--target=preview`, and deleting every deployment resets that |
+
+## What was adopted (Phase 2)
+
+| Need | Adopted | Source | Notes |
+|---|---|---|---|
+| Saves outside the game folder (browser) | Origin private file system, the pattern Forge already uses | `src/apps/forge/virtual/VirtualProjectFolder.ts:163`; MDN getDirectory | `src/utility/GameFileSystem.ts` |
+| Saves outside the game folder (desktop) | Electron `app.getPath('userData')` | Electron `app` docs | IPC `get-user-data-path` |
+| Read-only folder access | File System Access permission mode "read" | MDN requestPermission | |
+| Party members | `AddAvailableNPCByTemplate` + `AddPartyMember` by party slot, reusing KOTOR II slots | Deadlystream 4435, 8711 | no new slots (none found) |
+| Journal, plot and globals | Community practice edits global.jrl, plot.2da and globalcat.2da; shipping edited game tables is barred here, so the same rows are added **in memory** from the mod's own `campaign.json` | Deadlystream 3811, 2830; search 31 | `src/managers/ModManager.ts` |
+| Switching off a base-game entry scene | The scene's trigger (search 33, 37) is switched off by tag per area, from the mod's manifest; scripts, conversations and creatures likewise | Deadlystream 7017 | `src/managers/ModSwitchOff.ts` |
+| Script compile | In-tree compiler (Phase 1 adopt), routine table from `NWScriptDefK2.ts` | `src/nwscript/compiler/NWScriptCompiler.ts:95` | no base-game includes |
+| Co-op signaling | `ws` already in node_modules relays WebRTC signaling on 127.0.0.1 | search 35, MDN | M3 |
+| Upstream PR 112 | Reference only: draft, unmerged, 294 files | search 36 | not merged into this fork |
