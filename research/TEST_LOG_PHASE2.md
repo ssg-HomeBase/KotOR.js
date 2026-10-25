@@ -236,7 +236,7 @@ RESULT: PASS (6 of 6). A first run on the stand-in folder failed only because th
 Deployed as preview `dpl_HxSdQH6Ps3WWXUyZiwzTu3np3Zvr` (READY, 302 to Vercel login, 108 files, 0 blocked, 0 production deployments).
 
 
-## Save Game menu fix (after Cam's report, 2026-10-25 about 18:10 to 19:00)
+## Save Game menu fix (after Cam's report, 2026-10-25, 18:16 to about 18:45)
 
 Cam's report (checklist step 21): the Save Game name box opened, nothing in it worked, and it stayed on screen after leaving the menu. Earlier tests saved by calling the engine directly, so they never opened the save menu. The fix is FEASIBILITY finding 23.
 
