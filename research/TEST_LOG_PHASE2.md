@@ -273,3 +273,5 @@ Browser path: `scripts/kotor3/e2e-web-folder.mjs` now saves, overwrites and load
 RESULT: PASS (8 of 8).
 
 Reruns after the fix (new saves are now numbered from 2): M1 test m1_run5 PASS (7 of 7; its save is `000002 - Game1`), episode playthrough ep_run3 PASS (10 of 10). `prepare-deploy.mjs`: scan PASS, 108 files, 9.8 MB.
+
+Deployed as preview `dpl_9tokezRsp91SmUcRFDw6NpdCkDkG` (READY, target preview, 302 to Vercel login, 108 files, 0 blocked, 0 production deployments).
