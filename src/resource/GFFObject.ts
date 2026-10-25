@@ -992,7 +992,9 @@ export class GFFObject {
             break;
           case GFFDataType.LIST:
             if (field.getChildStructs().length == 0){
-              this.BWFields.writeUInt32(0xFFFFFFFF);
+              // Point at a zero-count entry, as the games' own files do (0xFFFFFFFF is still accepted on read).
+              this.BWFields.writeUInt32(this.BWListIndicies.position);
+              this.BWListIndicies.writeUInt32(0);
             }
             else {
               this.BWFields.writeUInt32(this.BWListIndicies.position);
