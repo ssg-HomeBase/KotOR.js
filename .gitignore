@@ -13,13 +13,38 @@ Saves/
 # src/**/*.js
 dist/
 debug.log
-docs/
+docs/*
+!docs/STORY_BIBLE.md
+!docs/FEASIBILITY.md
 coverage/
 scratch/
-research/
+research/*
+!research/R9_LOG.md
+!research/TEST_LOG.md
 .history/
 /extensions/
 .npm-cache/
 .vscode/mcp.json
 .vscode/chrome-debug-profile/
 exports/
+
+# KOTOR III guard (decision 9): never commit KOTOR game files or copies of them.
+# scripts/scan-no-game-files.mjs enforces this by type and by hash before every push and deploy.
+*.bif
+*.key
+*.rim
+*.erf
+*.tpc
+*.tga
+*.mdl
+*.mdx
+*.wav
+*.mp3
+*.wmv
+*.bik
+dialog.tlk
+test-artifacts/
+# Exceptions: only the file types authored for the mod (none of them is a blocked type today).
+!mods/kotor3/**/*.utc
+!mods/kotor3/**/*.dlg
+!mods/kotor3/**/*.json

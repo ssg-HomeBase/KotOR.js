@@ -2,6 +2,7 @@
 import * as swKotOR from "@/apps/launcher/profiles/kotor";
 import * as swKotOR2 from "@/apps/launcher/profiles/tsl";
 import * as swForge from "@/apps/launcher/profiles/forge";
+import * as swKotOR3Fan from "@/apps/launcher/profiles/kotor3";
 import { ConfigClient } from "@/utility/ConfigClient";
 
 export class Launcher {
@@ -25,10 +26,12 @@ export class Launcher {
       kotor: swKotOR.LauncherConfig,
       tsl: swKotOR2.LauncherConfig,
       forge: swForge.LauncherConfig,
+      kotor3: swKotOR3Fan.LauncherConfig,
     };
     Launcher.AppProfiles.kotor.key = 'kotor';
     Launcher.AppProfiles.tsl.key = 'tsl';
     Launcher.AppProfiles.forge.key = 'forge';
+    Launcher.AppProfiles.kotor3.key = 'kotor3';
 
     Launcher.ensureGameProfileSlots();
     Launcher.populateAppCategories();
@@ -64,6 +67,7 @@ export class Launcher {
       if(profilesRoot.kotor) repaired.kotor = profilesRoot.kotor;
       if(profilesRoot.tsl) repaired.tsl = profilesRoot.tsl;
       if(profilesRoot.forge) repaired.forge = profilesRoot.forge;
+      if(profilesRoot.kotor3) repaired.kotor3 = profilesRoot.kotor3;
       ConfigClient.set('Profiles', repaired);
     }
 

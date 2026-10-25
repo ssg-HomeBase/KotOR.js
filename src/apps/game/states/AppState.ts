@@ -23,7 +23,7 @@ export class AppState {
     await KotOR.ConfigClient.Init();
     await Launcher.InitProfiles();
     const rawKey = query.get("key");
-    const gameKeys = ['kotor', 'tsl'];
+    const gameKeys = ['kotor', 'tsl', 'kotor3'];
     const key =
       rawKey && gameKeys.includes(rawKey) ? rawKey : "kotor";
     return Launcher.GetProfileByKey(key);

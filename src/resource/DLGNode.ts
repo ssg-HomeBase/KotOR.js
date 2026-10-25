@@ -49,6 +49,8 @@ export class DLGNode {
   quest: string;
   questEntry: number;
   repliesShown: boolean = false;
+  /** Delay from the DLG file in seconds (-1 = default). Kept apart from `delay`, which holds the live value in ms. */
+  baseDelay: number = -1;
   replies: DLGNode[] = [];
   entries: DLGNode[] = [];
   script: NWScriptInstance;
@@ -762,7 +764,7 @@ export class DLGNode {
     }
 
     if(struct.hasField('Delay')){
-      node.delay = struct.getFieldByLabel('Delay').getValue() & 0xFFFFFFFF;
+      node.delay = node.baseDelay = struct.getFieldByLabel('Delay').getValue() & 0xFFFFFFFF;
     }
 
     if(struct.hasField('FadeType')){

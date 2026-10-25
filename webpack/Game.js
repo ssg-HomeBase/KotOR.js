@@ -42,6 +42,8 @@ module.exports = (name, color) => ({
       patterns: [
         { from: "src/assets/game", to: "" },
         { from: "src/assets/icons/icon.ico", to: "favicon.ico" },
+        // KOTOR III fan mod: authored runtime files only (no authoring sources, no game files).
+        { from: "mods/kotor3", to: "mods/kotor3", globOptions: { ignore: ["**/src/**", "**/*.md"] } },
       ],
     }),
     ...(isProd ? [new MiniCssExtractPlugin({

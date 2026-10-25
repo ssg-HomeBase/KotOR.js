@@ -57,6 +57,7 @@ import type { Module } from "@/module/Module";
 import { IVISRoom } from "@/interface/module/IVISRoom";
 import { BackgroundMusicMode } from "@/enums/audio/BackgroundMusicMode";
 import { ModuleObjectScript } from "@/enums/module/ModuleObjectScript";
+import { ModManager } from "@/managers/ModManager";
 
 type AreaScriptKeys = 'OnEnter'|'OnExit'|'OnHeartbeat'|'OnUserDefined';
 
@@ -1106,6 +1107,25 @@ export class ModuleArea extends ModuleObject {
         const strt = creatures.childStructs[i];
         this.attachObject( new ModuleCreature(GFFObject.FromStruct(strt)) );
       }
+    }
+
+    //Creatures added by the active fan mod (KOTOR III). Built like a GIT "Creature List" entry.
+    for(const placement of ModManager.GetCreaturePlacements(this.name)){
+      // A save made with the mod already lists the creature in its GIT; do not add a second copy.
+      const alreadyPlaced = (creatures?.childStructs || []).some( (s) =>
+        String(s.getFieldByLabel('TemplateResRef')?.getValue() || '').toLowerCase() == placement.templateResRef.toLowerCase()
+      );
+      if(alreadyPlaced) continue;
+      const instance = new GFFObject();
+      const theta = placement.facing * Math.PI / 180;
+      instance.RootNode.addField( new GFFField(GFFDataType.RESREF, 'TemplateResRef') ).setValue(placement.templateResRef);
+      instance.RootNode.addField( new GFFField(GFFDataType.FLOAT, 'XPosition') ).setValue(placement.x);
+      instance.RootNode.addField( new GFFField(GFFDataType.FLOAT, 'YPosition') ).setValue(placement.y);
+      instance.RootNode.addField( new GFFField(GFFDataType.FLOAT, 'ZPosition') ).setValue(placement.z);
+      instance.RootNode.addField( new GFFField(GFFDataType.FLOAT, 'XOrientation') ).setValue(Math.cos(theta));
+      instance.RootNode.addField( new GFFField(GFFDataType.FLOAT, 'YOrientation') ).setValue(Math.sin(theta));
+      this.attachObject( new ModuleCreature(instance) );
+      console.log('ModManager: placed creature', placement.templateResRef, 'in', this.name);
     }
 
     //Triggers
