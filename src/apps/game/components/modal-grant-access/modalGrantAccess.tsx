@@ -4,6 +4,7 @@ import { useApp } from "@/apps/game/context/AppContext";
 import { ApplicationEnvironment } from "@/apps/game/KotOR";
 import { NeedKotorCollapsibleSection } from "@/apps/common/components/needKotor/NeedKotorCollapsibleSection";
 import * as KotOR from "@/apps/game/KotOR";
+import { FileListDirectory } from "@/utility/FileListDirectory";
 
 /**
  * KOTOR III Phase 2: what the game app's Grant Access box tells the player.
@@ -77,6 +78,31 @@ export const ModalGrantAccess = () => {
     setStatus('');
     KotOR.EventManager.FireEvent('grant-access.grant');
     await appState.attachDirectoryHandle(handle);
+  }
+
+  // The older folder picker (<input webkitdirectory>): a second way in when Chrome refuses the newer one.
+  const folderInput = React.useRef<HTMLInputElement | null>(null);
+  const openOlderPicker = () => {
+    setPendingHandle(null);
+    setStatus('');
+    folderInput.current?.click();
+  }
+  const onOlderPickerFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    try {
+      const files = e.target.files;
+      if (!files || !files.length) {
+        setStatus('No folder was chosen. Click OPEN THE FOLDER ANOTHER WAY and pick C:\\Games\\Knights of the Old Republic II.');
+        return;
+      }
+      setStatus(`Reading the list of ${files.length.toLocaleString()} files...`);
+      const folder = FileListDirectory.fromFiles(files);
+      e.target.value = '';
+      if (!folder) { setStatus('That folder looks empty. Pick C:\\Games\\Knights of the Old Republic II.'); return; }
+      await finishBrowserGrant(folder as unknown as FileSystemDirectoryHandle);
+    } catch (err) {
+      console.error('Grant Access (older picker)', err);
+      setStatus(`Something went wrong reading the folder (${describe(err)}). Tell Claude this message.`);
+    }
   }
 
   const showBrowserDirectoryPicker = async () => {
@@ -153,6 +179,20 @@ export const ModalGrantAccess = () => {
         )}
         {status && (
           <p className="grant-access-status" role="alert" style={{ color: '#ffcc66' }}>{status}</p>
+        )}
+        {appState.env == ApplicationEnvironment.BROWSER && (
+          <p className="grant-access-older-picker">
+            If GRANT ACCESS does nothing or Chrome refuses the folder, use{' '}
+            <button type="button" className="modal-button grant-access-older-button" onClick={openOlderPicker}>OPEN THE FOLDER ANOTHER WAY</button>
+            {' '}and pick the same folder. Chrome then asks to &quot;upload&quot; the files: nothing leaves your PC, the game only reads them in this tab. You will need to pick the folder again after reloading the page.
+            <input
+              type="file"
+              multiple
+              style={{ display: 'none' }}
+              ref={(el) => { if (el) { el.setAttribute('webkitdirectory', ''); el.setAttribute('directory', ''); } folderInput.current = el; }}
+              onChange={onOlderPickerFiles}
+            />
+          </p>
         )}
       </div>
       <NeedKotorCollapsibleSection gameKey={gameKey} />

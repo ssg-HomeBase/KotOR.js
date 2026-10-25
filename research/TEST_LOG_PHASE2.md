@@ -214,3 +214,24 @@ Reproduced on the production build served locally (`C:\dev\kotor3\phase2\deploy`
    - permission that needs a second click (first request throws `SecurityError`): the box asks for one more click and the button becomes **CONTINUE**; a real click on CONTINUE granted access, the box closed and the game started loading.
 3. Production build re-prepared (`prepare-deploy.mjs`, guard PASS, 108 files) and deployed as preview `dpl_4A6SniTzVvwfVxSfBLv9rLivoewS` (READY, 302 to Vercel login, 0 blocked files, 0 production deployments).
 
+## Second folder picker and the first full browser-path test (2026-10-25, about 17:45)
+
+Cam retried on the fixed preview: the box showed "No folder was opened. If Chrome said it cannot open the folder, it is probably under C:\Program Files ..." (the picker's `AbortError`), and later clicks did not open the picker again. He was testing on this Windows PC, with the `C:\Games` copy, in a Chrome profile the Claude extension is not connected to, so that profile's settings could not be read.
+
+Fix: a second way in, the older folder picker (**OPEN THE FOLDER ANOTHER WAY**), read through `src/utility/FileListDirectory.ts`.
+
+Test: `node scripts/kotor3/e2e-web-folder.mjs --site "C:\dev\kotor3\phase2\deploy" --game-dir "C:\Games\Knights of the Old Republic II" --out ...` serves the production build on 127.0.0.1 and opens it as a plain web page in a Chromium window (Electron, no preload, so the game runs its browser path); the native folder dialog is the only step replaced, by DevTools `DOM.setFileInputFiles` on the older picker's input.
+
+| Check | Result | Evidence |
+|---|---|---|
+| grant_box_offers_older_picker | PASS | the box shows OPEN THE FOLDER ANOTHER WAY |
+| grant_box_closes_after_folder | PASS | box closed about 2 s after the folder was given |
+| game_reads_folder_in_browser | PASS | main menu in about 17 s; 36 mod files; environment BROWSER; folder "Knights of the Old Republic II" read through the older picker |
+| area_loads_with_mod_in_browser | PASS | `201tel` with Seren; no base-game conversation on entry |
+| save_in_browser_storage | PASS | save files in the origin private file system: SAVEGAME.sav, PARTYTABLE.res, GLOBALVARS.res, savenfo.res, Screen.tga |
+| no_write_game_folder | PASS | the whole `C:\Games` copy listed before and after: 19,487 entries, none added, removed or changed |
+
+RESULT: PASS (6 of 6). A first run on the stand-in folder failed only because the older picker does not follow the stand-in's junctions (no `data` folder seen); the `C:\Games` copy has real folders.
+
+Deployed as preview `dpl_HxSdQH6Ps3WWXUyZiwzTu3np3Zvr` (READY, 302 to Vercel login, 108 files, 0 blocked, 0 production deployments).
+

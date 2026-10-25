@@ -237,8 +237,10 @@ export class AppState {
     if(AppState.env == ApplicationEnvironment.ELECTRON){
       KotOR.ApplicationProfile.directory = AppState.appProfile.directory;
     }else{
-      KotOR.ApplicationProfile.directoryHandle =
-        AppState.appProfile.directory_handle ?? KotOR.ApplicationProfile.directoryHandle;
+      // A folder picked this visit with the older picker wins over any folder saved earlier.
+      KotOR.ApplicationProfile.directoryHandle = (KotOR.ApplicationProfile.directoryHandle as any)?.isFileListEntry
+        ? KotOR.ApplicationProfile.directoryHandle
+        : (AppState.appProfile.directory_handle ?? KotOR.ApplicationProfile.directoryHandle);
     }
     console.log('loading game...');
     AppState.loaderInit(AppState.appProfile.background, AppState.appProfile.logo);
@@ -296,8 +298,12 @@ export class AppState {
    */
   static async attachDirectoryHandle(handle: FileSystemDirectoryHandle){
     KotOR.ApplicationProfile.directoryHandle = handle;
-    AppState.appProfile.directory_handle = handle;
-    KotOR.ConfigClient.set(`Profiles.${AppState.appProfile.key}.directory_handle`, handle);
+    // KOTOR III Phase 2: a folder from the older picker (FileListDirectory) is kept for this visit only;
+    // saving it would copy the whole game into browser storage.
+    if(!(handle as any)?.isFileListEntry){
+      AppState.appProfile.directory_handle = handle;
+      KotOR.ConfigClient.set(`Profiles.${AppState.appProfile.key}.directory_handle`, handle);
+    }
     AppState.directoryLocated = true;
     if(AppState.shouldDeferForAudioUnlock()){
       AppState.processEventListener('on-preload', []);
