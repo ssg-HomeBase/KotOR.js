@@ -191,3 +191,12 @@ State after: quests The Last Signal 50, A Navigator 30, A Ship 30; party: player
 Nodes visited per conversation: k3_seren 13; k3_brannick 7; k3_senn 5; k3_sv_nar 5; k3_kiri 5; k3_zell 5; k3_rhea 7; k3_hesk 10; k3_corva 7; k3_end 5.
 
 RESULT: PASS
+
+## M2.6 web check (built-in browser, Chromium)
+
+2026-10-25, local dev server (`npm run dev -- --host 127.0.0.1`), page `http://127.0.0.1:8080/game/index.html?key=kotor3`:
+
+1. The KotOR.js disclaimer showed; OK was clicked.
+2. The **Grant Access** box showed the Phase 2 text: "Pick your KOTOR II game folder. The game only reads it: saves and temporary files are kept in this browser's own storage ..., never in your game folder." and "Chrome cannot open folders under C:\Program Files or C:\Program Files (x86) ... copy the game folder to C:\Games ... pick C:\Games\Knights of the Old Republic II." (`src/apps/game/components/modal-grant-access/modalGrantAccess.tsx`).
+3. The folder picker is a native Windows dialog and cannot be driven from the page (fallback F2); this step is in Cam's checklist.
+4. Browser storage for saves, checked from the page's console (inspection only, before any game folder was attached): `GameFileSystem.gameFolderReadOnly` true; storage "origin private file system: kotorjs-game-data/kotor3"; `mkdir('Saves/k3-webcheck')`, `writeFile`, `readFile` (text read back equal), `readdir('Saves')` listed the file, `rmdir` removed it. No game folder handle was attached, so these writes could not have touched a game folder.
