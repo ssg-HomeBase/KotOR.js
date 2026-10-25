@@ -258,8 +258,10 @@ export class CutsceneManager {
     }
 
     //Node Delay
-    const nodeDelay = (this.cutsceneMode != CutsceneMode.ANIMATED && entry.delay > -1) ? entry.delay * 1000 : ENTRY_DELAY;
+    // Use the file's delay, not the live value from the last time this line was shown, and restart the clock.
+    const nodeDelay = (this.cutsceneMode != CutsceneMode.ANIMATED && entry.baseDelay > -1) ? entry.baseDelay * 1000 : ENTRY_DELAY;
     entry.setNodeDelay(nodeDelay);
+    entry.elapsed = 0;
     if(isComputerCameraEntry){
       entry.setNodeDelay(5000);
     }
