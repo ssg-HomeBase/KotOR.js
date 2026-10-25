@@ -24,7 +24,7 @@ How to read this file:
 10. Surik's trained Jedi go on to help rebuild the Order, and her spirit stays with the imprisoned Revan. (https://starwars.fandom.com/wiki/Meetra_Surik, seen 2026-10-24)
 11. The Sith Emperor, once called Vitiate, drained a whole world (Nathema) in a ritual and led the surviving Sith to Dromund Kaas. (https://starwars.fandom.com/wiki/Vitiate, seen 2026-10-24)
 12. The "True Sith" Empire was founded by Sith exiles who fled into the Unknown Regions after the Great Hyperspace War, settled Dromund Kaas, and rebuilt in secret for over a thousand years before invading the Republic roughly three centuries after Revan's time (the Great Galactic War of *Star Wars: The Old Republic*). (https://starwars.fandom.com/wiki/True_Sith and https://starwars.fandom.com/wiki/Dromund_Kaas/Legends, seen 2026-10-24)
-13. In current Disney canon none of this exists; Revan survives only as an ancient Sith Lord whose name Sith Eternal cultists chant and whose name the Sith Eternal "Revan Legion" carries. (https://starwars.fandom.com/wiki/Revan, seen 2026-10-24)
+13. Current Disney canon says much less. Wookieepedia's canon article on Revan says only that he was a Sith Lord, that Sith cultists on Exegol repeated his name in something like a chant, and that the Sith Eternal army's Revan Legion was named after him (https://starwars.fandom.com/wiki/Revan, seen 2026-10-25). The Exile appears in canon only as a passing nod: the exclamation "Surik's Blade!" in *Star Wars: The High Republic* comics, which writer Cavan Scott implied refers to Meetra Surik (https://starwars.fandom.com/wiki/Surik, seen 2026-10-25).
 
 ## 3. What the original developers planned (real world)
 
@@ -112,7 +112,8 @@ The full text is in `mods/kotor3/src/k3_seren.dialogue.json`.
 - https://starwars.fandom.com/wiki/Vitiate
 - https://starwars.fandom.com/wiki/True_Sith
 - https://starwars.fandom.com/wiki/Dromund_Kaas/Legends
-- https://starwars.fandom.com/wiki/Revan
+- https://starwars.fandom.com/wiki/Revan (reread 2026-10-25 for lore 13)
+- https://starwars.fandom.com/wiki/Surik (read 2026-10-25, lore 13)
 - https://starwars.fandom.com/wiki/Star_Wars:_Knights_of_the_Old_Republic_III
 - https://www.engadget.com/2013-08-01-knights-of-the-old-republic-3-was-in-pre-production-at-obsidian.html
 - https://steamcommunity.com/news/post/3763229740650005667
