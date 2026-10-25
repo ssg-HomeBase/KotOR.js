@@ -190,3 +190,39 @@ export const clickGui = (expr) => `(() => { const c = ${expr}; if (!c) throw new
 
 /** Area-loaded check for a given area resref (in game or in a conversation). */
 export const inAreaExpr = (area) => `(KotOR.GameState.Mode === 1 || KotOR.GameState.Mode === 3) && !!KotOR.GameState.module && !!KotOR.GameState.module.area && KotOR.GameState.module.area.name.toLowerCase() === ${JSON.stringify(area.toLowerCase())} && !KotOR.GameState.module.loading`;
+
+/**
+ * Helpers for the KOTOR II save and load menus (KOTOR III Phase 2, finding 23), shared by the desktop and
+ * browser tests. send is a CDP send function for the game page, ev evaluates in it.
+ */
+export function saveMenuHelpers({ send, ev }) {
+  const MM = 'KotOR.GameState.MenuManager';
+  /** Real key presses for each character (Shift held for capitals): the events a keyboard sends. */
+  const typeText = async (text) => {
+    for (const ch of text) {
+      let code, vk, modifiers = 0;
+      if (ch === ' ') { code = 'Space'; vk = 32; }
+      else if (/[0-9]/.test(ch)) { code = `Digit${ch}`; vk = ch.charCodeAt(0); }
+      else if (/[A-Za-z]/.test(ch)) { code = `Key${ch.toUpperCase()}`; vk = ch.toUpperCase().charCodeAt(0); if (ch !== ch.toLowerCase()) modifiers = 8; }
+      else throw new Error(`typeText: unsupported character ${ch}`);
+      if (modifiers) await send('Input.dispatchKeyEvent', { type: 'rawKeyDown', key: 'Shift', code: 'ShiftLeft', windowsVirtualKeyCode: 16, modifiers });
+      await send('Input.dispatchKeyEvent', { type: 'keyDown', key: ch, code, windowsVirtualKeyCode: vk, nativeVirtualKeyCode: vk, text: ch, modifiers });
+      await sleep(40);
+      await send('Input.dispatchKeyEvent', { type: 'keyUp', key: ch, code, windowsVirtualKeyCode: vk, nativeVirtualKeyCode: vk, modifiers });
+      if (modifiers) await send('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Shift', code: 'ShiftLeft', windowsVirtualKeyCode: 16 });
+      await sleep(60);
+    }
+  };
+  const visible = (menu) => `!!(${MM}.${menu} && ${MM}.${menu}.isVisible())`;
+  const listNames = `${MM}.MenuSaveLoad.LB_GAMES.children.map(c => c.node ? (c.node.isNewSave ? '[New Save]' : c.node.getSaveName()) : '?')`;
+  const savedNames = `KotOR.SaveGame.saves.map(s => s.getSaveName())`;
+  /** Clicks the save list row with this name ('[New Save]' for the new slot); returns what is then selected. */
+  const clickRow = async (name) => {
+    const i = await ev(`${listNames}.indexOf(${JSON.stringify(name)})`);
+    if (i < 0) throw new Error(`no row "${name}" in the save list: ${JSON.stringify(await ev(listNames))}`);
+    await ev(clickGui(`${MM}.MenuSaveLoad.LB_GAMES.children[${i}]`));
+    await sleep(500);
+    return ev(`(() => { const s = ${MM}.MenuSaveLoad.selected; return s ? (s.isNewSave ? '[New Save]' : s.getSaveName()) : null; })()`);
+  };
+  return { MM, typeText, visible, listNames, savedNames, clickRow };
+}

@@ -235,3 +235,41 @@ RESULT: PASS (6 of 6). A first run on the stand-in folder failed only because th
 
 Deployed as preview `dpl_HxSdQH6Ps3WWXUyZiwzTu3np3Zvr` (READY, 302 to Vercel login, 108 files, 0 blocked, 0 production deployments).
 
+
+## Save Game menu fix (after Cam's report, 2026-10-25 about 18:10 to 19:00)
+
+Cam's report (checklist step 21): the Save Game name box opened, nothing in it worked, and it stayed on screen after leaving the menu. Earlier tests saved by calling the engine directly, so they never opened the save menu. The fix is FEASIBILITY finding 23.
+
+Test: `node scripts/kotor3/e2e-save-menu.mjs --game-dir "C:\dev\kotor3\test-artifacts\gamedir-view" --out "C:\dev\kotor3\test-artifacts\phase2\save_menu_run2"` in the desktop app. It starts a New Game through the menus and then uses only the menus: Options, Save Game, the new save slot, SAVE, a name typed with real key presses, OK; controls are clicked through their own click listeners.
+
+| Check | Result | Evidence |
+|---|---|---|
+| s1_name_box_opens | PASS | the name box is on screen, its edit box has the keyboard and is empty |
+| s2_name_typed_with_keys | PASS | typed "K3 Menu Save" with key presses (Shift for capitals); the box shows exactly that |
+| s3_ok_saves_and_closes | PASS | OK closes the box; save folder `000002 - Game1` in `electron-profile\game-data\kotor3\Saves` with SAVEGAME.sav, savenfo.res, GLOBALVARS.res, PARTYTABLE.res, Screen.tga; the save is in the list |
+| s4_new_slot_kept_second_save | PASS | the new save slot is still the top row; a second save "K3 Second" works (two folders) |
+| s5_cancel_closes_without_saving | PASS | Cancel closes the box; still two saves |
+| s6_overwrite_asks_then_saves_same_slot | PASS | SAVE on "K3 Menu Save" asks to overwrite (string 1591); OK rewrites the same folder (newer file time), still two saves |
+| s7_delete_asks_then_deletes_that_save | PASS | Delete asks first (string 1592); OK removes `000003 - Game2` only, from app storage |
+| s8_load_menu_loads_save | PASS | Options, Load Game, "K3 Menu Save", Load: back in `201tel`, the menu closed |
+| s9_no_write_to_stand_in_root | PASS | stand-in root 16 entries before and after, none added or removed |
+| s9_no_write_to_real_game_folder | PASS | real game folder 19,487 entries before and after, none added or removed |
+
+RESULT: PASS (10 of 10). Run save_menu_run1, before the numbering fix, failed only s6: overwriting the first save (number 1) made a third save, because overwrite replaced only numbers 2 and up.
+
+Browser path: `scripts/kotor3/e2e-web-folder.mjs` now saves, overwrites and loads through the same menus instead of calling the engine (run web_save_menu_run1, production build from `prepare-deploy.mjs` served on 127.0.0.1, older folder picker given `C:\Games\Knights of the Old Republic II`).
+
+| Check | Result | Evidence |
+|---|---|---|
+| grant_box_offers_older_picker | PASS | the box shows OPEN THE FOLDER ANOTHER WAY |
+| grant_box_closes_after_folder | PASS | closed |
+| game_reads_folder_in_browser | PASS | 36 mod files; environment BROWSER; storage: origin private file system `kotorjs-game-data/kotor3` |
+| area_loads_with_mod_in_browser | PASS | `201tel` with Seren; no conversation on entry |
+| menu_save_in_browser_storage | PASS | typed "K3 Web Save", OK closed the box; `000002 - Game1` with SAVEGAME.sav, savenfo.res, GLOBALVARS.res, PARTYTABLE.res, Screen.tga in browser storage |
+| menu_overwrite_in_browser | PASS | after the overwrite question and OK: same folder, newer SAVEGAME.sav, one save of that name |
+| menu_load_in_browser | PASS | Load Game, "K3 Web Save", Load: back in `201tel` |
+| no_write_game_folder | PASS | the whole `C:\Games` copy: 19,487 entries before and after, none added or removed |
+
+RESULT: PASS (8 of 8).
+
+Reruns after the fix (new saves are now numbered from 2): M1 test m1_run5 PASS (7 of 7; its save is `000002 - Game1`), episode playthrough ep_run3 PASS (10 of 10). `prepare-deploy.mjs`: scan PASS, 108 files, 9.8 MB.

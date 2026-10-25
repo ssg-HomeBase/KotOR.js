@@ -96,8 +96,8 @@ export class SaveGame {
   static FolderRegexValidator: RegExp = /^(\d+) - (Game\d+)$|^(000000) - (QUICKSAVE)$|^(000001) - (AUTOSAVE)$/;
   /** Regular expression to match valid save game folder name patterns */
   static FolderNameRegex: RegExp = /^(\d+) - (QUICKSAVE|AUTOSAVE|Game\d+)$/;
-  /** The next available save ID for new saves */
-  static NEXT_SAVE_ID: number = 1;
+  /** The next available save ID for new saves (KOTOR III Phase 2: starts at 2; 0 and 1 are the quick save and autosave) */
+  static NEXT_SAVE_ID: number = 2;
   /** The ERF object containing the save game data */
   SAVEGAME: ERFObject;
   //NEXT_SAVE_ID - 0 QUICKSAVE
@@ -858,7 +858,9 @@ export class SaveGame {
     GameState.MenuManager.LoadScreen.open();
     GameState.MenuManager.LoadScreen.showSavingMessage();
 
-    let save_id = replace_id >= 2 ? replace_id : SaveGame.NEXT_SAVE_ID++;
+    // KOTOR III Phase 2: replace_id comes only from OverwriteSave (the save list leaves out the quick save and
+    // autosave), so 1 is a manual save made when numbering started at 1; overwrite it in place too.
+    let save_id = replace_id >= 1 ? replace_id : SaveGame.NEXT_SAVE_ID++;
 
     //Prepare SaveGame directory
     if(!(await GameFileSystem.exists(SaveGame.base_directory))){

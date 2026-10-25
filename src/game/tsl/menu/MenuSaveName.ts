@@ -25,11 +25,9 @@ export class MenuSaveName extends K1_MenuSaveName {
   }
 
   async menuControlInitializer(skipInit: boolean = false) {
-    await super.menuControlInitializer(true);
-    if(skipInit) return;
-    return new Promise<void>((resolve, reject) => {
-      resolve();
-    });
+    // KOTOR III Phase 2: the parent sets up the edit box and the OK and Cancel buttons. This used to
+    // skip that and add nothing, so OK and Cancel did nothing and the box never closed.
+    await super.menuControlInitializer(skipInit);
   }
   
 }

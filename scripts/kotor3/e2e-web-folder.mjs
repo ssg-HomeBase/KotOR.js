@@ -14,7 +14,7 @@ import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import http from 'node:http';
-import { parseArgs, makeLog, sleep, cdp, evaluate, waitFor, listTree, diffLists } from './e2e-lib.mjs';
+import { parseArgs, makeLog, sleep, cdp, evaluate, waitFor, listTree, diffLists, clickGui, saveMenuHelpers } from './e2e-lib.mjs';
 
 const { arg } = parseArgs();
 const SITE = arg('--site'), GAME_DIR = arg('--game-dir'), OUT = arg('--out');
@@ -90,10 +90,59 @@ try {
   const seren = await ev(`!!KotOR.GameState.module.area.creatures.find(c => (c.getTag() || '').toLowerCase() === 'k3_seren')`);
   const conv = await ev(`KotOR.CutsceneManager.active ? KotOR.CutsceneManager.conversation_name : ''`);
   pass('area_loads_with_mod_in_browser', seren && !conv, { seren, conversationOnEntry: conv });
-  await ev(`KotOR.SaveGame.SaveCurrentGame('K3 web test', 0).then(() => true)`);
-  await waitFor(page, `KotOR.SaveGame.saves.some(s => s.SAVEGAMENAME === 'K3 web test')`, 'save', 60000);
-  const opfs = await ev(`(async () => { const r = await navigator.storage.getDirectory(); const top = await r.getDirectoryHandle('kotorjs-game-data'); const k = await top.getDirectoryHandle('kotor3'); const s = await k.getDirectoryHandle('Saves'); const out = []; for await (const d of s.values()) { if (d.kind !== 'directory') continue; for await (const f of d.values()) out.push(d.name + '/' + f.name); } return out; })()`);
-  pass('save_in_browser_storage', opfs.some((f) => /SAVEGAME\.sav$/i.test(f)), opfs);
+  // Save, overwrite and load through the menus, as a player does in Chrome (FEASIBILITY finding 23).
+  const { MM, typeText, visible, savedNames, clickRow } = saveMenuHelpers({ send: (m, p) => page.send(m, p), ev });
+  const click = (expr) => ev(clickGui(expr));
+  const NAME = 'K3 Web Save';
+  const opfsFiles = () => ev(`(async () => { const r = await navigator.storage.getDirectory(); const top = await r.getDirectoryHandle('kotorjs-game-data'); const k = await top.getDirectoryHandle('kotor3'); const s = await k.getDirectoryHandle('Saves'); const out = []; for await (const d of s.values()) { if (d.kind !== 'directory') continue; for await (const f of d.values()) { const file = f.kind === 'file' ? await f.getFile() : null; out.push({ path: d.name + '/' + f.name, time: file ? file.lastModified : 0 }); } } return out; })()`);
+  await waitFor(page, `!KotOR.CutsceneManager.active && KotOR.GameState.Mode === 1`, 'in game', 60000);
+  await click(`${MM}.InGameOverlay.BTN_OPT`);
+  await waitFor(page, visible('MenuOptions'), 'options menu', 20000);
+  await sleep(800);
+  await click(`${MM}.MenuOptions.BTN_SAVEGAME`);
+  await waitFor(page, visible('MenuSaveLoad'), 'save menu', 20000);
+  await sleep(1500);
+  await clickRow('[New Save]');
+  await click(`${MM}.MenuSaveLoad.BTN_SAVELOAD`);
+  await waitFor(page, visible('MenuSaveName'), 'save name box', 10000);
+  await sleep(500);
+  await typeText(NAME);
+  const typed = await ev(`${MM}.MenuSaveName.EDITBOX.getValue()`);
+  await click(`${MM}.MenuSaveName.BTN_OK`);
+  await sleep(500);
+  const boxClosed = !(await ev(visible('MenuSaveName')));
+  await waitFor(page, `${savedNames}.includes(${JSON.stringify(NAME)}) && !${visible('LoadScreen')}`, 'menu save', 60000).catch(() => false);
+  await sleep(1500);
+  const files1 = await opfsFiles();
+  const sav1 = files1.filter((f) => /SAVEGAME.sav$/i.test(f.path));
+  pass('menu_save_in_browser_storage', typed === NAME && boxClosed && sav1.length === 1 && (await ev(savedNames)).includes(NAME), { typed, boxClosed, files: files1.map((f) => f.path) });
+  await sleep(1200);
+  await clickRow(NAME);
+  await click(`${MM}.MenuSaveLoad.BTN_SAVELOAD`);
+  await waitFor(page, visible('InGameConfirm'), 'overwrite question', 10000);
+  await sleep(500);
+  await click(`${MM}.InGameConfirm.BTN_OK`);
+  await sleep(1000);
+  await waitFor(page, `!${visible('LoadScreen')} && !${visible('InGameConfirm')}`, 'overwrite', 60000).catch(() => false);
+  await sleep(1500);
+  const files2 = await opfsFiles();
+  const sav2 = files2.filter((f) => /SAVEGAME.sav$/i.test(f.path));
+  const names2 = await ev(savedNames);
+  pass('menu_overwrite_in_browser', sav2.length === 1 && sav1.length === 1 && sav2[0].path === sav1[0].path && sav2[0].time > sav1[0].time && names2.filter((n) => n === NAME).length === 1,
+    { before: sav1, after: sav2, names: names2 });
+  await click(`${MM}.MenuSaveLoad.BTN_BACK`);
+  await sleep(1000);
+  if (!(await ev(visible('MenuOptions')))) { await click(`${MM}.InGameOverlay.BTN_OPT`); await waitFor(page, visible('MenuOptions'), 'options menu', 20000); }
+  await sleep(800);
+  await click(`${MM}.MenuOptions.BTN_LOADGAME`);
+  await waitFor(page, visible('MenuSaveLoad'), 'load menu', 20000);
+  await sleep(1500);
+  const selLoad = await clickRow(NAME);
+  await click(`${MM}.MenuSaveLoad.BTN_SAVELOAD`);
+  await sleep(3000);
+  for (let i = 0; i < 60 && !(await ev(`(${inArea}) || false`).catch(() => false)); i++) { await ev(`(() => { const v = KotOR.GameState.VideoManager; if (v.isMoviePlaying() || v.movieQueue.length) { v.stopMovie(); v.playNextMovie(); } return true; })()`).catch(() => {}); await sleep(1500); }
+  const loaded = await ev(`(${inArea}) && !KotOR.GameState.module.loading`).catch(() => false);
+  pass('menu_load_in_browser', selLoad === NAME && loaded && !(await ev(visible('MenuSaveLoad'))), { selected: selLoad, inArea: loaded });
 } catch (e) {
   note(`ERROR: ${e.message}`);
 } finally {
@@ -103,7 +152,7 @@ try {
   const folderAfter = listTree(GAME_DIR);
   const d = diffLists(folderBefore, folderAfter);
   pass('no_write_game_folder', !d.added.length && !d.removed.length, { entries: folderAfter.length, ...d });
-  const expected = ['grant_box_offers_older_picker', 'grant_box_closes_after_folder', 'game_reads_folder_in_browser', 'area_loads_with_mod_in_browser', 'save_in_browser_storage', 'no_write_game_folder'];
+  const expected = ['grant_box_offers_older_picker', 'grant_box_closes_after_folder', 'game_reads_folder_in_browser', 'area_loads_with_mod_in_browser', 'menu_save_in_browser_storage', 'menu_overwrite_in_browser', 'menu_load_in_browser', 'no_write_game_folder'];
   const passed = expected.every((k) => checks[k]?.pass);
   note(`RESULT: ${passed ? 'PASS' : 'FAIL'} (${expected.filter((k) => checks[k]?.pass).length} of ${expected.length} checks)`);
   fs.writeFileSync(path.join(OUT, 'e2e-web-folder-result.json'), JSON.stringify({ passed, checks }, null, 2));
