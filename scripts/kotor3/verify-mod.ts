@@ -98,7 +98,8 @@ for (const [file, gff] of parsed) {
     entries.forEach((e, i) => { if (!textOf(e)) fail(`${file}: entry ${i} has no text`); });
     replies.forEach((r, i) => { if (!textOf(r)) fail(`${file}: reply ${i} has no text`); });
     const nodes = entries.length + replies.length;
-    if (nodes < 8 || nodes > 15) fail(`${file}: ${nodes} nodes, expected 8 to 15`);
+    // Phase 2 episode conversations run from 6 to about 25 nodes (docs/EPISODE1.md).
+    if (nodes < 6 || nodes > 30) fail(`${file}: ${nodes} nodes, expected 6 to 30`);
     if (choicePoints < 1) fail(`${file}: no entry offers a choice`);
     // scripts the dialogue runs
     for (const label of ['EndConversation', 'EndConverAbort']) useScript(resrefOf(root, label), `${file} ${label}`);

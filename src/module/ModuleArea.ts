@@ -2125,9 +2125,23 @@ export class ModuleArea extends ModuleObject {
 
   runOnEnterScripts(){
     const nwscript = this.scripts[ModuleObjectScript.AreaOnEnter];
-    if(!nwscript){ return; }
-    nwscript.enteringObject = GameState.PartyManager.party[0];
-    nwscript.run(this, 0);
+    if(nwscript){
+      nwscript.enteringObject = GameState.PartyManager.party[0];
+      nwscript.run(this, 0);
+    }
+    // KOTOR III Phase 2: the active fan mod's own entry script for this area (manifest "onEnter"),
+    // run after the area's own, so a mod can start its scenes without editing a game file.
+    const modScriptName = ModManager.GetAreaEnterScript(this.name);
+    if(modScriptName){
+      const modScript = NWScript.Load(modScriptName);
+      if(modScript){
+        modScript.enteringObject = GameState.PartyManager.party[0];
+        modScript.run(this, 0);
+        console.log('ModManager: ran area enter script', modScriptName, 'in', this.name);
+      }else{
+        console.warn('ModManager: area enter script not found', modScriptName);
+      }
+    }
   }
 
   async runStartScripts(){

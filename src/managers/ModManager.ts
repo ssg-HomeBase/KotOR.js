@@ -63,6 +63,8 @@ export interface IModManifest {
   switchOff?: Record<string, IModSwitchOff>;
   /** Campaign data file (globals and quests), e.g. "campaign.json". */
   campaign?: string;
+  /** The mod's own script to run when an area is entered (after the area's own), keyed by area resref. */
+  onEnter?: Record<string, string>;
 }
 
 /**
@@ -174,6 +176,14 @@ export class ModManager {
   static GetCreaturePlacements(areaResRef: string): IModCreaturePlacement[] {
     const area = String(areaResRef || '').toLowerCase();
     return (ModManager.manifest?.creatures || []).filter((c) => c.area.toLowerCase() === area);
+  }
+
+  /** The mod's entry script for an area, if any (manifest "onEnter"). */
+  static GetAreaEnterScript(areaResRef: string): string | undefined {
+    const map = ModManager.manifest?.onEnter || {};
+    const area = String(areaResRef || '').toLowerCase();
+    const key = Object.keys(map).find((k) => k.toLowerCase() === area);
+    return key ? map[key] : undefined;
   }
 
   /** True when the mod switches this base-game trigger, creature, script or conversation off in the area. */

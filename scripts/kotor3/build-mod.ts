@@ -330,7 +330,9 @@ function buildDialogue(src: any, scripts: Set<string>): Uint8Array {
   let nodeId = 0;
   const entries = src.entries.map((e: any, i: number) => {
     const s = new GFFStruct(i);
-    add(s, GFFDataType.CEXOSTRING, 'Speaker', '');
+    // Optional "speaker": the tag of another creature in the scene who says this line (blank = the owner).
+    if (e.speaker !== undefined && (typeof e.speaker !== 'string' || !/^[a-z0-9_]{1,32}$/i.test(e.speaker))) throw new Error(`dialogue ${src.resref}: entry ${e.id} "speaker" must be a creature tag: ${JSON.stringify(e.speaker)}`);
+    add(s, GFFDataType.CEXOSTRING, 'Speaker', e.speaker || '');
     addNodeFields(s, e.text, nodeId++, scriptRef(e, 'script'));
     add(s, GFFDataType.LIST, 'RepliesList', e.replies.map((r: string, j: number) => {
       const index = need(replyIndex, r, e.id);
