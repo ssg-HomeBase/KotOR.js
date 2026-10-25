@@ -1,0 +1,25 @@
+{
+  "resref": "k3_hesk",
+  "tag": "k3_hesk",
+  "firstName": "Hesk",
+  "lastName": "Varo",
+  "comment": "KOTOR III (fan): Twi'lek ship broker who sells the Far Lantern. Uses the player's own KOTOR II body model by appearance.2da row number only.",
+  "conversation": "k3_hesk",
+  "appearanceRow": 365,
+  "appearanceNote": "appearance.2da row 365 in the player's KOTOR II (Twilek_Male_03_F).",
+  "gender": 0,
+  "race": 6,
+  "factionId": 5,
+  "hitPoints": 20,
+  "abilities": {
+    "Str": 10,
+    "Dex": 12,
+    "Con": 10,
+    "Int": 14,
+    "Wis": 12,
+    "Cha": 14
+  },
+  "classId": 0,
+  "classLevel": 1,
+  "plot": true
+}

@@ -1,12 +1,45 @@
 {
   "key": "kotor3",
-  "name": "KOTOR III (fan) Phase 2",
+  "name": "KOTOR III (fan) Episode 1: The Last Signal",
   "baseGame": "tsl",
   "startModule": "201tel",
   "files": [
+    "k3_brannick.utc",
+    "k3_corva.utc",
+    "k3_hesk.utc",
+    "k3_kiri.utc",
+    "k3_rhea.utc",
+    "k3_senn.utc",
     "k3_seren.utc",
+    "k3_zell.utc",
+    "k3_brannick.dlg",
+    "k3_corva.dlg",
+    "k3_end.dlg",
+    "k3_hesk.dlg",
+    "k3_kiri.dlg",
+    "k3_rhea.dlg",
+    "k3_senn.dlg",
     "k3_seren.dlg",
-    "k3_probe.ncs"
+    "k3_sv_nar.dlg",
+    "k3_zell.dlg",
+    "k3_c_metsv.ncs",
+    "k3_c_nav20.ncs",
+    "k3_c_ready.ncs",
+    "k3_c_shippaid.ncs",
+    "k3_c_svjoin.ncs",
+    "k3_corva_met.ncs",
+    "k3_ep_end.ncs",
+    "k3_go_nar.ncs",
+    "k3_nar_enter.ncs",
+    "k3_probe.ncs",
+    "k3_q_arrive.ncs",
+    "k3_q_nav10.ncs",
+    "k3_q_nav20.ncs",
+    "k3_q_ship20.ncs",
+    "k3_q_sig10.ncs",
+    "k3_rh_join.ncs",
+    "k3_ship_done.ncs",
+    "k3_sv_join.ncs"
   ],
   "creatures": [
     {
@@ -17,6 +50,63 @@
       "z": 13.14,
       "facing": 124,
       "skipIfGlobal": "K3_SEREN_JOINED"
+    },
+    {
+      "area": "201tel",
+      "templateResRef": "k3_brannick",
+      "x": -17.1,
+      "y": 15.07,
+      "z": 13.14,
+      "facing": 315
+    },
+    {
+      "area": "201tel",
+      "templateResRef": "k3_senn",
+      "x": -8.57,
+      "y": 11.53,
+      "z": 13.14,
+      "facing": 180
+    },
+    {
+      "area": "301nar",
+      "templateResRef": "k3_kiri",
+      "x": -105.22,
+      "y": 22.8,
+      "z": 9.67,
+      "facing": 135
+    },
+    {
+      "area": "301nar",
+      "templateResRef": "k3_zell",
+      "x": -103.76,
+      "y": 26.34,
+      "z": 9.67,
+      "facing": 180
+    },
+    {
+      "area": "301nar",
+      "templateResRef": "k3_rhea",
+      "x": -112.29,
+      "y": 29.87,
+      "z": 9.67,
+      "facing": 315,
+      "skipIfGlobal": "K3_RHEA_JOINED"
+    },
+    {
+      "area": "301nar",
+      "templateResRef": "k3_hesk",
+      "x": -112.29,
+      "y": 22.8,
+      "z": 9.67,
+      "facing": 45
+    },
+    {
+      "area": "301nar",
+      "templateResRef": "k3_corva",
+      "x": -116.76,
+      "y": 26.34,
+      "z": 9.67,
+      "facing": 0
     }
   ],
   "campaign": "campaign.json",
@@ -28,6 +118,37 @@
       "conversations": [
         "201bay"
       ]
+    },
+    "301nar": {
+      "triggers": [
+        "301Arrival",
+        "301AttonWarn2",
+        "301AttonHelp",
+        "301KreiaTouch",
+        "TT32Talk",
+        "TriggerLupo",
+        "301Mug",
+        "301Ref3",
+        "301RefEnc",
+        "301Ratrin",
+        "tr_thugboss",
+        "RedEclipseArrival",
+        "RedEclipseAttack",
+        "tr_spawn_mira",
+        "tr_prevent306",
+        "tr_swoop_return"
+      ],
+      "creatures": [
+        "ExchangeThug1",
+        "ExchangeThug2",
+        "ExchangeThug3",
+        "ExchangeThug4",
+        "ThugBoss",
+        "GranThug"
+      ]
     }
+  },
+  "onEnter": {
+    "301nar": "k3_nar_enter"
   }
 }

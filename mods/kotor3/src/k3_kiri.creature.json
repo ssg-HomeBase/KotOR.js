@@ -1,0 +1,25 @@
+{
+  "resref": "k3_kiri",
+  "tag": "k3_kiri",
+  "firstName": "Kiri",
+  "lastName": "",
+  "comment": "KOTOR III (fan): Old refugee on the Nar Shaddaa landing pad. Uses the player's own KOTOR II body model by appearance.2da row number only.",
+  "conversation": "k3_kiri",
+  "appearanceRow": 342,
+  "appearanceNote": "appearance.2da row 342 in the player's KOTOR II (Commoner_Dirty_Fem_Old_Asian).",
+  "gender": 1,
+  "race": 6,
+  "factionId": 5,
+  "hitPoints": 20,
+  "abilities": {
+    "Str": 10,
+    "Dex": 12,
+    "Con": 10,
+    "Int": 14,
+    "Wis": 12,
+    "Cha": 14
+  },
+  "classId": 0,
+  "classLevel": 1,
+  "plot": true
+}

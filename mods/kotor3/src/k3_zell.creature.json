@@ -1,0 +1,25 @@
+{
+  "resref": "k3_zell",
+  "tag": "k3_zell",
+  "firstName": "Zell",
+  "lastName": "Okkar",
+  "comment": "KOTOR III (fan): Duros information broker on the Nar Shaddaa landing pad. Uses the player's own KOTOR II body model by appearance.2da row number only.",
+  "conversation": "k3_zell",
+  "appearanceRow": 373,
+  "appearanceNote": "appearance.2da row 373 in the player's KOTOR II (Alien_Duros_02).",
+  "gender": 0,
+  "race": 6,
+  "factionId": 5,
+  "hitPoints": 20,
+  "abilities": {
+    "Str": 10,
+    "Dex": 12,
+    "Con": 10,
+    "Int": 14,
+    "Wis": 12,
+    "Cha": 14
+  },
+  "classId": 0,
+  "classLevel": 1,
+  "plot": true
+}

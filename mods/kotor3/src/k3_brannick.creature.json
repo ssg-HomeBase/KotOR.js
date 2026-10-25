@@ -1,0 +1,25 @@
+{
+  "resref": "k3_brannick",
+  "tag": "k3_brannick",
+  "firstName": "Brannick",
+  "lastName": "",
+  "comment": "KOTOR III (fan): Retired spacer on Citadel Station who remembers the old routes. Uses the player's own KOTOR II body model by appearance.2da row number only.",
+  "conversation": "k3_brannick",
+  "appearanceRow": 193,
+  "appearanceNote": "appearance.2da row 193 in the player's KOTOR II (Commoner_Mal_Old_White_01_A).",
+  "gender": 0,
+  "race": 6,
+  "factionId": 5,
+  "hitPoints": 20,
+  "abilities": {
+    "Str": 10,
+    "Dex": 12,
+    "Con": 10,
+    "Int": 14,
+    "Wis": 12,
+    "Cha": 14
+  },
+  "classId": 0,
+  "classLevel": 1,
+  "plot": true
+}
