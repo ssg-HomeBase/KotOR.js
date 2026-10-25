@@ -136,7 +136,8 @@ try {
   note(`game window opened: ${gt.url.replace(/^.*\/dist\//, 'dist/')}`);
   await sleep(1000);
   // Windowed, so the test does not take over the whole screen.
-  await evaluate(main, `(() => { process.mainModule.require('electron').BrowserWindow.getAllWindows().forEach(w => { if (w.isFullScreen()) w.setFullScreen(false); }); return true; })()`);
+  // Keep rendering even when the window is behind others (otherwise movies and timers stall).
+  await evaluate(main, `(() => { process.mainModule.require('electron').BrowserWindow.getAllWindows().forEach(w => { if (w.isFullScreen()) w.setFullScreen(false); w.webContents.setBackgroundThrottling(false); }); return true; })()`);
   game = await cdp(gt.webSocketDebuggerUrl);
   game.on((m) => {
     if (m.method === 'Runtime.consoleAPICalled') {
@@ -171,9 +172,15 @@ try {
   note(`mod start area from manifest: ${startModule}`);
   note(`warping to ${AREA}`);
   await evaluate(game, `KotOR.GameState.LoadModule(${JSON.stringify(AREA)}), true`);
-  const inArea = `KotOR.GameState.Mode === 1 && !!KotOR.GameState.module && !!KotOR.GameState.module.area && KotOR.GameState.module.area.name.toLowerCase() === ${JSON.stringify(AREA)}`;
+  // In-game (1) or in a conversation the area's own enter script started (3).
+  const inArea = `(KotOR.GameState.Mode === 1 || KotOR.GameState.Mode === 3) && !!KotOR.GameState.module && !!KotOR.GameState.module.area && KotOR.GameState.module.area.name.toLowerCase() === ${JSON.stringify(AREA)}`;
   for (let i = 0; i < 200 && !(await evaluate(game, `(${inArea}) || false`).catch(() => false)); i++) {
-    if (await evaluate(game, `KotOR.GameState.VideoManager.isMoviePlaying()`).catch(() => false)) await pressKey('Escape', 'Escape', 27);
+    // Intro and area movies (from the player's own game) may play here; skip them, including unskippable ones.
+    if (await evaluate(game, `KotOR.GameState.Mode === 5 || KotOR.GameState.VideoManager.isMoviePlaying()`).catch(() => false)) {
+      await pressKey('Escape', 'Escape', 27);
+      await evaluate(game, `(() => { const v = KotOR.GameState.VideoManager; v.stopMovie(); v.playNextMovie(); return true; })()`).catch(() => {});
+      note('  skipped a movie');
+    }
     await sleep(1500);
   }
   await waitFor(game, inArea, 'area to load', 10000, 1000);
@@ -195,7 +202,10 @@ try {
   result.steps.npc = npc;
   await screenshot(game, 'area_with_npc');
 
-  // Three runs cover all 7 entries and 7 replies: choose by key number at each choice point.
+  // Map line text back to the node ids in the mod's source file (the engine numbers live nodes -1).
+  const src = JSON.parse(fs.readFileSync(path.join(REPO, 'mods/kotor3/src/k3_seren.dialogue.json'), 'utf8'));
+  const idOf = (text, list) => (list.find((n) => n.text.trim() === String(text || '').trim()) || {}).id || '?';
+  // Three runs cover all 7 entries and 7 replies: the number is the reply's position in the list.
   const runs = [
     { name: 'accept path', keys: [1, 1, 1, 1, 1] },
     { name: 'refuse at start', keys: [2] },
@@ -204,33 +214,45 @@ try {
   const seenEntries = new Set(), seenReplies = new Set();
   for (const run of runs) {
     note(`dialogue run: ${run.name}`);
+    for (let i = 0; i < 20; i++) {
+      const s = await evaluate(game, `(() => { const m = KotOR.CutsceneManager; if (m.active && m.conversation_name !== ${JSON.stringify(NPC_TAG)}) { m.endConversation(true); return 'ended:' + m.conversation_name; } return (!m.active && KotOR.GameState.Mode === 1) ? 'ready' : 'mode ' + KotOR.GameState.Mode; })()`);
+      if (s === 'ready') break;
+      if (s.startsWith('ended:')) note(`  ended the area's own conversation (${s.slice(6)})`);
+      await sleep(500);
+    }
     await waitFor(game, `!KotOR.CutsceneManager.active && KotOR.GameState.Mode === 1`, 'in-game mode before dialogue', 30000);
     await evaluate(game, `(() => { const c = KotOR.GameState.module.area.creatures.find(c => (c.getTag() || '').toLowerCase() === ${JSON.stringify(NPC_TAG)});
       KotOR.CutsceneManager.startConversation(c.conversation, c, KotOR.GameState.PartyManager.party[0]); return true; })()`);
     const steps = [];
-    let keyIdx = 0, lastEntry = -1;
+    let keyIdx = 0, lastEntry = '', lastReplies = '';
     const end = Date.now() + 120000;
     while (Date.now() < end) {
-      const st = await evaluate(game, `(() => { const m = KotOR.CutsceneManager; return { active: !!m.active, mode: KotOR.GameState.Mode,
-        entry: m.currentEntry ? { index: m.currentEntry.index, text: m.currentEntry.text } : null,
-        replies: (m.currentReplies || []).map(r => ({ index: r.index, text: r.text })) }; })()`);
+      // The engine clears currentEntry while it shows the replies, so remember the last line spoken.
+      // Replies open for choice once the line's timer ends (showReplies clears currentEntry).
+      const st = await evaluate(game, `(() => { const m = KotOR.CutsceneManager; return { active: !!m.active,
+        entry: m.currentEntry ? m.currentEntry.text : null, spoken: m.lastSpokenString || '',
+        replies: m.currentEntry ? [] : (m.currentReplies || []).map(r => r.text) }; })()`);
       if (!st.active) break;
-      if (st.entry && st.entry.index !== lastEntry) {
-        lastEntry = st.entry.index; seenEntries.add(st.entry.index);
-        steps.push({ entry: st.entry.index, text: st.entry.text });
-        note(`  NPC (entry ${st.entry.index}): ${st.entry.text}`);
+      const line = st.entry || st.spoken;
+      if (line && line !== lastEntry && idOf(line, src.entries) !== '?') {
+        lastEntry = line; const id = idOf(line, src.entries); seenEntries.add(id);
+        steps.push({ node: id, speaker: 'Seren', text: line });
+        note(`  Seren (${id}): ${line}`);
         await sleep(1200);
-        await screenshot(game, `dialog_${run.name.replace(/\s+/g, '_')}_E${st.entry.index}`);
+        await screenshot(game, `dialog_${run.name.replace(/\s+/g, '_')}_${id}`);
       }
-      if (st.replies.length && st.entry && st.entry.index === lastEntry) {
+      const replyKey = st.replies.join('|');
+      if (st.replies.length && replyKey !== lastReplies) {
         const k = run.keys[keyIdx++] ?? 1;
         const chosen = st.replies[k - 1];
-        if (!chosen) throw new Error(`no reply ${k} at entry ${st.entry.index}`);
-        seenReplies.add(chosen.index);
-        steps.push({ reply: chosen.index, key: k, text: chosen.text, options: st.replies.length });
-        note(`  player presses ${k} of ${st.replies.length} (reply ${chosen.index}): ${chosen.text}`);
-        await pressDigit(game, k);
-        await waitFor(game, `(() => { const m = KotOR.CutsceneManager; return !m.active || (m.currentEntry && m.currentEntry.index !== ${st.entry.index}); })()`, 'next node', 20000, 200);
+        if (!chosen) throw new Error(`no reply ${k} after ${lastEntry}`);
+        const id = idOf(chosen, src.replies); seenReplies.add(id);
+        steps.push({ node: id, speaker: 'player', choice: `${k} of ${st.replies.length}`, text: chosen });
+        note(`  player picks ${k} of ${st.replies.length} (${id}): ${chosen}`);
+        // Same handler a mouse click on the reply list calls (number keys are unbound upstream).
+        await evaluate(game, `KotOR.GameState.MenuManager.InGameDialog.LB_REPLIES.onSelected(null, null, ${k - 1}), true`);
+        lastReplies = replyKey;
+        await waitFor(game, `(() => { const m = KotOR.CutsceneManager; return !m.active || (m.currentReplies || []).map(r => r.text).join('|') !== ${JSON.stringify(replyKey)}; })()`, 'next node', 20000, 200);
         continue;
       }
       await sleep(300);
@@ -243,7 +265,7 @@ try {
     note(`  run ended (${steps.length} steps)`);
     result.dialogue.push({ run: run.name, steps });
   }
-  result.coverage = { entries: [...seenEntries].sort((a, b) => a - b), replies: [...seenReplies].sort((a, b) => a - b) };
+  result.coverage = { entries: [...seenEntries].sort(), replies: [...seenReplies].sort() };
   note(`coverage: entries ${result.coverage.entries.join(',')} | replies ${result.coverage.replies.join(',')}`);
   result.passed = result.coverage.entries.length === 7 && result.coverage.replies.length === 7 && !!npc.hasModel;
   note(`RESULT: ${result.passed ? 'PASS' : 'FAIL'}`);
