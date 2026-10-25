@@ -31,6 +31,7 @@
     {
       "id": "E5",
       "text": "Meet me at the docking ring when you are ready. Bring a ship that can make the long jump, and friends who will not turn back when the stars run out.",
+      "script": "k3_probe",
       "replies": []
     },
     {
