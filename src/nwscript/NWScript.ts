@@ -17,6 +17,7 @@ import { GameEngineType } from "@/enums/engine/GameEngineType";
 import { INWScriptDefAction } from "@/interface/nwscript/INWScriptDefAction";
 import { NWScriptDefK2 } from "@/nwscript/NWScriptDefK2";
 import { NWScriptDefK1 } from "@/nwscript/NWScriptDefK1";
+import { ModSwitchOff } from "@/managers/ModSwitchOff";
 
 export interface NWScriptLoadOptions {
   /** Explicit bytecode dialect. Defaults to the active game for runtime compatibility. */
@@ -269,8 +270,13 @@ export class NWScript {
    */
   static Load( scriptName = '', returnInstance = true, parentInstance?: NWScriptInstance ): NWScriptInstance {
     //If the script name is empty, return undefined
-    if(!scriptName){ 
-      return undefined; 
+    if(!scriptName){
+      return undefined;
+    }
+
+    // KOTOR III Phase 2: a fan mod can switch off named base-game scripts in an area.
+    if(ModSwitchOff.IsSwitchedOff('scripts', scriptName)){
+      return undefined;
     }
 
     //If the script is already loaded, create a new instance and return it

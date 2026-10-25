@@ -20,7 +20,35 @@ export class GlobalVariableManager {
     Location  : new Map(), 
   };
   
+  /** Globals a fan mod defines in its own data (KOTOR III Phase 2): added on every Init, never written to globalcat.2da. */
+  static ExtraDefinitions: { name: string; type: 'Boolean' | 'Number' | 'String' | 'Location' }[] = [];
+
+  public static AddExtraDefinitions(){
+    for(const def of GlobalVariableManager.ExtraDefinitions){
+      const key = def.name.toLowerCase();
+      switch(def.type){
+        case 'Boolean':
+          if(!GlobalVariableManager.Globals.Boolean.has(key)) GlobalVariableManager.Globals.Boolean.set(key, {name: def.name, value: false});
+        break;
+        case 'Number':
+          if(!GlobalVariableManager.Globals.Number.has(key)) GlobalVariableManager.Globals.Number.set(key, {name: def.name, value: 0});
+        break;
+        case 'String':
+          if(!GlobalVariableManager.Globals.String.has(key)) GlobalVariableManager.Globals.String.set(key, {name: def.name, value: ''});
+        break;
+        case 'Location':
+          if(!GlobalVariableManager.Globals.Location.has(key)) GlobalVariableManager.Globals.Location.set(key, {name: def.name, value: new EngineLocation()});
+        break;
+      }
+    }
+  }
+
   public static Init(){
+    // A new game starts from a clean set of globals (before this, values from a previous game stayed).
+    GlobalVariableManager.Globals.Boolean.clear();
+    GlobalVariableManager.Globals.Number.clear();
+    GlobalVariableManager.Globals.String.clear();
+    GlobalVariableManager.Globals.Location.clear();
     let _initGlobals = TwoDAManager.datatables.get('globalcat').rows;
     for (let key in _initGlobals) {
       if (_initGlobals.hasOwnProperty(key)) {
@@ -42,6 +70,7 @@ export class GlobalVariableManager {
         }
       }
     }
+    GlobalVariableManager.AddExtraDefinitions();
   }
   
   public static SetGlobalBoolean(name = '', value = false){

@@ -1,0 +1,35 @@
+{
+  "globals": [
+    {
+      "name": "K3_MET_SEREN",
+      "type": "Boolean"
+    },
+    {
+      "name": "K3_SIGNAL_STAGE",
+      "type": "Number"
+    },
+    {
+      "name": "K3_SEREN_JOINED",
+      "type": "Boolean"
+    }
+  ],
+  "quests": [
+    {
+      "tag": "k3_signal",
+      "name": "The Last Signal",
+      "priority": 1,
+      "comment": "KOTOR III (fan) prologue quest",
+      "xp": 0,
+      "entries": [
+        {
+          "id": 10,
+          "text": "A courier named Seren Vaux stopped me on the Citadel Station docks. She has carried a sealed recording for three years, and she believes it is meant for me."
+        },
+        {
+          "id": 20,
+          "text": "Seren says the seal lit up when I walked past. She will meet me at the docking ring once she has found a ship and a crew that will not turn back."
+        }
+      ]
+    }
+  ]
+}

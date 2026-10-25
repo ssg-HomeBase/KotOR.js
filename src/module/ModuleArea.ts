@@ -58,6 +58,7 @@ import { IVISRoom } from "@/interface/module/IVISRoom";
 import { BackgroundMusicMode } from "@/enums/audio/BackgroundMusicMode";
 import { ModuleObjectScript } from "@/enums/module/ModuleObjectScript";
 import { ModManager } from "@/managers/ModManager";
+import { ModSwitchOff } from "@/managers/ModSwitchOff";
 
 type AreaScriptKeys = 'OnEnter'|'OnExit'|'OnHeartbeat'|'OnUserDefined';
 
@@ -1053,6 +1054,23 @@ export class ModuleArea extends ModuleObject {
     }
 
     //BEGIN GIT LOAD
+    // KOTOR III Phase 2: the active fan mod can switch off base-game content per area (ModManager.IsSwitchedOff).
+    ModSwitchOff.currentArea = String(this.name || '').toLowerCase();
+    // Names to match: the GIT entry's Tag and TemplateResRef, and the Tag inside its template
+    // (base-game GIT entries usually carry only the template; the tag lives in the UTT or UTC).
+    const gitNames = (strt: GFFStruct, kind: 'triggers' | 'creatures', templateType: number): string[] => {
+      const names = [
+        String(strt.getFieldByLabel('Tag')?.getValue() || ''),
+        String(strt.getFieldByLabel('TemplateResRef')?.getValue() || ''),
+      ];
+      if(ModSwitchOff.HasRules(this.name, kind) && names[1]){
+        try{
+          const buffer = ResourceLoader.loadCachedResource(templateType, names[1]);
+          if(buffer) names.push(String(new GFFObject(buffer).RootNode.getFieldByLabel('Tag')?.getValue() || ''));
+        }catch(e){ /* no template: match on the GIT names only */ }
+      }
+      return names;
+    };
 
     const areaMap = this.git.getFieldByLabel('AreaMap');
     const areaProps = this.git.getFieldByLabel('AreaProperties');
@@ -1105,12 +1123,15 @@ export class ModuleArea extends ModuleObject {
     if(creatures){
       for(let i = 0; i < creatures.childStructs.length; i++){
         const strt = creatures.childStructs[i];
+        if(ModSwitchOff.IsSwitchedOff('creatures', gitNames(strt, 'creatures', ResourceTypes['utc']), this.name)) continue;
         this.attachObject( new ModuleCreature(GFFObject.FromStruct(strt)) );
       }
     }
 
     //Creatures added by the active fan mod (KOTOR III). Built like a GIT "Creature List" entry.
     for(const placement of ModManager.GetCreaturePlacements(this.name)){
+      // KOTOR III Phase 2: not placed again once a mod global says so (e.g. the companion joined the party).
+      if(placement.skipIfGlobal && GameState.GlobalVariableManager.GetGlobalBoolean(placement.skipIfGlobal)) continue;
       // A save made with the mod already lists the creature in its GIT; do not add a second copy.
       const alreadyPlaced = (creatures?.childStructs || []).some( (s) =>
         String(s.getFieldByLabel('TemplateResRef')?.getValue() || '').toLowerCase() == placement.templateResRef.toLowerCase()
@@ -1132,6 +1153,7 @@ export class ModuleArea extends ModuleObject {
     if(triggers){
       for(let i = 0; i < triggers.childStructs.length; i++){
         const strt = triggers.childStructs[i];
+        if(ModSwitchOff.IsSwitchedOff('triggers', gitNames(strt, 'triggers', ResourceTypes['utt']), this.name)) continue;
         this.attachObject( new ModuleTrigger(GFFObject.FromStruct(strt)) );
       }
     }

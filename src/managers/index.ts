@@ -34,3 +34,4 @@ export * from "@/managers/CutsceneManager";
 export * from "@/managers/LegalScreenManager";
 export * from "@/managers/EventManager";
 export * from "@/managers/ModManager";
+export * from "@/managers/ModSwitchOff";

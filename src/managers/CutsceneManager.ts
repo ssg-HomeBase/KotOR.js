@@ -15,6 +15,7 @@ import { AudioEngine } from "@/audio/AudioEngine";
 import { CutsceneMode } from "@/enums/dialog/CutsceneMode";
 import * as THREE from "three";
 import { CameraMode } from "@/enums/dialog/CameraMode";
+import { ModSwitchOff } from "@/managers/ModSwitchOff";
 import { ICameraState } from "@/interface/dialog/ICameraState";
 import { AudioEmitter } from "@/audio/AudioEmitter";
 import { ICameraParticipant } from "@/interface/dialog/ICameraParticipant";
@@ -78,6 +79,11 @@ export class CutsceneManager {
 
   static startConversation(dialog: DLGObject, owner: ModuleObject, listener: ModuleObject = GameState.PartyManager.party[0]) {
     console.log('CutsceneManager.startConversation', dialog, owner, listener);
+    // KOTOR III Phase 2: a fan mod can switch off named base-game conversations in an area.
+    const requested = (dialog instanceof DLGObject ? dialog : owner?.getConversation?.())?.resref;
+    if(requested && ModSwitchOff.IsSwitchedOff('conversations', requested)){
+      return;
+    }
     this.active = true;
     this.cameraState.currentCameraAnimation = undefined;
     this.owner = owner;

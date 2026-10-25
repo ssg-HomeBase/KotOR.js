@@ -68,11 +68,11 @@ export class JournalManager {
       GameState.UINotificationManager.EnableUINotificationIconType(UIIconTimerType.JOURNAL_ENTRY_ADDED);
       let entry = JournalManager.GeJournalEntryByTag(szPlotID);
       if(entry){
-        if(entry.state > state && allowOverrideHigher){
-          entry.state = state;
-        }else {
-          entry.state = state;
+        // A lower state only replaces a higher one when bAllowOverrideHigher is set (NWScript docs).
+        if(entry.state > state && !allowOverrideHigher){
+          return false;
         }
+        entry.state = state;
         // entry.date; //TODO
         // entry.time ; //TODO
         entry.load();
@@ -83,9 +83,23 @@ export class JournalManager {
         entry.date = 0; //TODO
         entry.time = 0; //TODO
         entry.load();
+        // KOTOR III Phase 2: a new quest was built but never added, so it never appeared or saved.
+        JournalManager.AddEntry(entry);
       }
+      return true;
     }
     return false;
+  }
+
+  /** Quest categories a fan mod defines in its own data (KOTOR III Phase 2); added after global.jrl loads. */
+  static ExtraCategories: JournalCategory[] = [];
+
+  static AddExtraCategories(){
+    for(const category of JournalManager.ExtraCategories){
+      if(!JournalManager.GetCategoryByTag(category.tag)){
+        JournalManager.Categories.push(category);
+      }
+    }
   }
 
   static RemoveJournalQuestEntry(szPlotID: string = ''): boolean {
@@ -119,6 +133,7 @@ export class JournalManager {
             JournalManager.Categories.push( JournalCategory.FromStruct(struct) );
           }
         }
+        JournalManager.AddExtraCategories();
         resolve();
       }).catch( (e) => {
         console.warn(`Failed to load global.jrl`);

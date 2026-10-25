@@ -981,7 +981,8 @@ export class SaveGame {
 
     //Global Booleans
     const catBooleanList  = gvt.RootNode.addField(new GFFField(GFFDataType.LIST, 'CatBoolean'));
-    const boolBuffer =  new Uint8Array( ( GameState.GlobalVariableManager.Globals.Boolean.size / 8 ) );
+    // KOTOR III Phase 2: round up, or the last booleans (where a mod's globals sit) are cut off.
+    const boolBuffer =  new Uint8Array( Math.ceil( GameState.GlobalVariableManager.Globals.Boolean.size / 8 ) );
     let i = 0;
     GameState.GlobalVariableManager.Globals.Boolean.forEach( (globBool, key: string) => {
       let boolean = globBool;
@@ -989,7 +990,8 @@ export class SaveGame {
       let bit_index = (i % 8);
 
       if(boolean.value){
-        boolBuffer[byte_offset] |= 1 << bit_index;
+        // KOTOR III Phase 2: highest bit first, as loadGlobalVARS reads it (and as the games store it).
+        boolBuffer[byte_offset] |= 1 << (7 - bit_index);
       }
 
       let boolStruct = new GFFStruct();
