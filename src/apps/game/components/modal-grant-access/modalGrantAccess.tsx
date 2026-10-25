@@ -2,8 +2,18 @@ import React from "react";
 import { KotORModal } from "@/apps/game/components/modal/modal";
 import { useApp } from "@/apps/game/context/AppContext";
 import { ApplicationEnvironment } from "@/apps/game/KotOR";
-import GrantAccessModalContent from "@/apps/common/components/grantAccess/GrantAccessModalContent";
+import { NeedKotorCollapsibleSection } from "@/apps/common/components/needKotor/NeedKotorCollapsibleSection";
 import * as KotOR from "@/apps/game/KotOR";
+
+/**
+ * KOTOR III Phase 2: what the game app's Grant Access box tells the player.
+ * Chrome refuses to let any website open folders under C:\Program Files or C:\Program Files (x86)
+ * (chrome_file_system_access_permission_context.cc), which is where Steam installs KOTOR II by default.
+ */
+export const GRANT_ACCESS_READ_ONLY_TEXT =
+  "Pick your KOTOR II game folder. The game only reads it: saves and temporary files are kept in this browser's own storage (or the desktop app's data folder), never in your game folder.";
+export const GRANT_ACCESS_PROGRAM_FILES_TEXT =
+  "Chrome cannot open folders under C:\\Program Files or C:\\Program Files (x86), and that is where Steam installs KOTOR II. First copy the game folder to C:\\Games: in File Explorer, copy the \"Knights of the Old Republic II\" folder from C:\\Program Files (x86)\\Steam\\steamapps\\common and paste it into C:\\Games. Then click GRANT ACCESS and pick C:\\Games\\Knights of the Old Republic II.";
 
 export const ModalGrantAccess = () => {
   const appContext = useApp();
@@ -19,7 +29,7 @@ export const ModalGrantAccess = () => {
   
   const showBrowserDirectoryPicker = async () => {
     const handle = await window.showDirectoryPicker({
-      mode: "readwrite"
+      mode: "read"
     });
     if(!handle) return;
 
@@ -77,7 +87,13 @@ export const ModalGrantAccess = () => {
       cancelText="QUIT" 
       okText="GRANT ACCESS"
     >
-      <GrantAccessModalContent gameKey={gameKey} />
+      <div className="grant-access-info">
+        <p>{GRANT_ACCESS_READ_ONLY_TEXT}</p>
+        {appState.env == ApplicationEnvironment.BROWSER && (
+          <p className="grant-access-program-files"><strong>{GRANT_ACCESS_PROGRAM_FILES_TEXT}</strong></p>
+        )}
+      </div>
+      <NeedKotorCollapsibleSection gameKey={gameKey} />
     </KotORModal>
   );
 };

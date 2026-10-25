@@ -177,5 +177,9 @@ contextBridge.exposeInMainWorld(
     openExternal: (src: string, options: any) => {
       shell.openExternal(src, options);
     },
+    // KOTOR III Phase 2: where the game keeps saves and in-progress state (never the game folder).
+    getUserDataPath: (): Promise<string> => {
+      return ipcRenderer.invoke('get-user-data-path');
+    },
   }
 );
