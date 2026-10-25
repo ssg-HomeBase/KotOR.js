@@ -200,3 +200,17 @@ RESULT: PASS
 2. The **Grant Access** box showed the Phase 2 text: "Pick your KOTOR II game folder. The game only reads it: saves and temporary files are kept in this browser's own storage ..., never in your game folder." and "Chrome cannot open folders under C:\Program Files or C:\Program Files (x86) ... copy the game folder to C:\Games ... pick C:\Games\Knights of the Old Republic II." (`src/apps/game/components/modal-grant-access/modalGrantAccess.tsx`).
 3. The folder picker is a native Windows dialog and cannot be driven from the page (fallback F2); this step is in Cam's checklist.
 4. Browser storage for saves, checked from the page's console (inspection only, before any game folder was attached): `GameFileSystem.gameFolderReadOnly` true; storage "origin private file system: kotorjs-game-data/kotor3"; `mkdir('Saves/k3-webcheck')`, `writeFile`, `readFile` (text read back equal), `readdir('Saves')` listed the file, `rmdir` removed it. No game folder handle was attached, so these writes could not have touched a game folder.
+
+## Grant Access fix (after Cam's report, 2026-10-25 17:2x)
+
+Cam, in Chrome on the preview: at checklist step 9, after picking `C:\Games\Knights of the Old Republic II`, nothing happened and no prompt appeared; GRANT ACCESS only reopened the picker.
+
+Reproduced on the production build served locally (`C:\dev\kotor3\phase2\deploy`, read-only static server on 127.0.0.1:8090) in the built-in browser, with `window.showDirectoryPicker` replaced by test stand-ins (empty test folders in the page's own private storage; no game data):
+
+1. Before the fix, with a stand-in folder that passes every check, the box closed and the game started loading: the code after a successful pick worked, so the failure is in the pick or permission step, where errors were not caught.
+2. After the fix (`modalGrantAccess.tsx`, `AppState.ts`):
+   - picker refused or cancelled (`AbortError`): the box shows "No folder was opened. If Chrome said it cannot open the folder ... pick C:\Games\Knights of the Old Republic II instead."
+   - folder without chitin.key: the box names the folder and says to pick the KOTOR II folder itself.
+   - permission that needs a second click (first request throws `SecurityError`): the box asks for one more click and the button becomes **CONTINUE**; a real click on CONTINUE granted access, the box closed and the game started loading.
+3. Production build re-prepared (`prepare-deploy.mjs`, guard PASS, 108 files) and deployed as preview `dpl_4A6SniTzVvwfVxSfBLv9rLivoewS` (READY, 302 to Vercel login, 0 blocked files, 0 production deployments).
+

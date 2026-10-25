@@ -313,6 +313,10 @@ export class AppState {
   static async validateDirectoryHandle(handle: FileSystemDirectoryHandle){
     try{
       // KOTOR III Phase 2: read-only. The game folder is never written (saves live in the browser's own storage).
+      // Check first: asking again outside a click throws in Chrome even when access was already given.
+      if ((await (handle as any).queryPermission({ mode: 'read' })) === 'granted') {
+        return true;
+      }
       if ((await handle.requestPermission({ mode: 'read' })) === 'granted') {
         return true;
       }
