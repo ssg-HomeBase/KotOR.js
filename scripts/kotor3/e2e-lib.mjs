@@ -92,7 +92,7 @@ export const sha256File = (p) => crypto.createHash('sha256').update(fs.readFileS
  * gameDir (through Electron's main-process debugger; the native dialog cannot be driven), launches the
  * KOTOR III entry and returns CDP clients for the launcher, the main process and the game window.
  */
-export async function launchKotor3({ repo, out, gameDir, log, port = 9223, screenshotTag = '' }) {
+export async function launchKotor3({ repo, out, gameDir, log, port = 9223, screenshotTag = '', extraArgs = [] }) {
   const { note, consoleLines } = log;
   const targets = async () => (await fetch(`http://127.0.0.1:${port}/json/list`)).json();
   const waitTarget = async (pred, what, timeoutMs = 120000) => {
@@ -104,7 +104,7 @@ export async function launchKotor3({ repo, out, gameDir, log, port = 9223, scree
   const electronExe = path.join(repo, 'node_modules', 'electron', 'dist', process.platform === 'win32' ? 'electron.exe' : 'electron');
   note(`starting Electron (profile ${profileDir})`);
   const mainPort = port + 10;
-  const child = spawn(electronExe, [`--inspect=${mainPort}`, `--remote-debugging-port=${port}`, `--user-data-dir=${profileDir}`, 'main.js'], { cwd: repo, stdio: ['ignore', 'pipe', 'pipe'] });
+  const child = spawn(electronExe, [`--inspect=${mainPort}`, `--remote-debugging-port=${port}`, `--user-data-dir=${profileDir}`, ...extraArgs, 'main.js'], { cwd: repo, stdio: ['ignore', 'pipe', 'pipe'] });
   child.stdout.on('data', (d) => consoleLines.push(`[main] ${d.toString().trim()}`));
   child.stderr.on('data', (d) => consoleLines.push(`[main:err] ${d.toString().trim()}`));
 
