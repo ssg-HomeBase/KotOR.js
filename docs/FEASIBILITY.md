@@ -250,7 +250,7 @@ Phase 1: about 1,400. The spike proved the transport and the avatar sync on one 
 
 You do not need to type any commands. Allow about 45 minutes. Everything happens in Chrome, signed in to Vercel as your usual account (cctv75).
 
-**Preview link (private, opens only for you after you sign in to Vercel):** https://kotor3-preview-8ha3el39x-itshot90210-9796s-projects.vercel.app
+**Preview link (private, opens only for you after you sign in to Vercel):** https://kotor3-preview-r0rdkmes3-itshot90210-9796s-projects.vercel.app
 
 ### A. Your game copy (already done)
 1. The run already copied KOTOR II to `C:\Games\Knights of the Old Republic II` for you (Chrome cannot open folders under `C:\Program Files`). Nothing to do here. (If that folder is ever missing, open File Explorer, go to `C:\Program Files (x86)\Steam\steamapps\common`, right-click **Knights of the Old Republic II**, click **Copy**, go to `C:\Games`, right-click an empty spot and click **Paste**.)

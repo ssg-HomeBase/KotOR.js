@@ -296,3 +296,5 @@ New check in every save and load test: the characters in the area by tag, before
 `prepare-deploy.mjs` (now from an empty `dist/`): scan PASS, 107 files, 9.8 MB.
 
 Round 5 grader notes cleared at the same time: `prepare-deploy.mjs` now empties `dist/` before building (a stale co-op file had ridden along), docs/FEASIBILITY.md no longer says the browser save path was checked from the console only, and the paths on line 3 of this log are fixed.
+
+Deployed as preview `dpl_8ZsChL7ydVndipBiV6ZPUWwA7SYX` (READY, target preview, 302 to Vercel login, 107 files, 0 blocked, no co-op file, 0 production deployments).
