@@ -1,6 +1,6 @@
 # Test log, Phase 2 (KOTOR III fan)
 
-All runs on 2026-10-25 in the KotOR.js desktop app (Electron) on the stand-in game folder `C:\dev\kotor3\test-artifacts\gamedir-view` (junctions to the player's own KOTOR II data, its own root). Tests never run on the real game folder; they only list it (read only) before and after. Screenshots and full logs stay in `C:\dev\kotor3\test-artifacts\phase2` outside the repo, because screenshots show game assets.
+Runs on 2026-10-25 and 2026-10-26 in the KotOR.js desktop app (Electron; the browser build where noted) on the stand-in game folder `C:\dev\kotor3\test-artifacts\gamedir-view` (junctions to the player's own KOTOR II data, its own root). Tests never run on the real game folder; they only list it (read only) before and after. Screenshots and full logs stay in `C:\dev\kotor3\test-artifacts\phase2` outside the repo, because screenshots show game assets.
 
 Tools: `scripts/kotor3/e2e-phase2.mjs` (M1 engine checks), `scripts/kotor3/e2e-episode.mjs` (M2 playthrough), `scripts/kotor3/e2e-electron.mjs` (Phase 1 scene, regression), `scripts/kotor3/check-text.mjs` (originality against dialog.tlk, in memory), `scripts/kotor3/check-dlg.mjs` (independent GFF reader), `node scripts/kotor3/run.mjs build-mod` / `verify-mod`.
 
@@ -298,3 +298,32 @@ New check in every save and load test: the characters in the area by tag, before
 Round 5 grader notes cleared at the same time: `prepare-deploy.mjs` now empties `dist/` before building (a stale co-op file had ridden along), docs/FEASIBILITY.md no longer says the browser save path was checked from the console only, and the paths on line 3 of this log are fixed.
 
 Deployed as preview `dpl_8ZsChL7ydVndipBiV6ZPUWwA7SYX` (READY, target preview, 302 to Vercel login, 107 files, 0 blocked, no co-op file, 0 production deployments).
+
+## Journal, the "freeze" and the browser playthrough (after Cam's report, 2026-10-26 from 11:15)
+
+Cam's report: "There are no quests available, and as I started talking to the other characters in the second location my game froze". Then: "if you are able to do play test on your own, do it and don't ask me". FEASIBILITY findings 25 and 26.
+
+Diagnostic runs (scratch scripts, not in the repo; artifacts in `C:\dev\kotor3\test-artifacts\phase2\`):
+
+| Run | Build | What it did | Seen |
+|---|---|---|---|
+| diag_click2 | desktop, `89642209` | the whole route by clicking each character (its own click handler, as a mouse click does), save and load on Nar Shaddaa, Hesk and Corva after the load | every conversation started and ended; no freeze; the journal (menu bar button) held 3 quests but drew no rows |
+| diag_journal1 | desktop, `89642209` | journal from the menu bar, Close, Esc, then talking | opening threw part way; Close did nothing; Esc closed it; talking then worked |
+| diag_web_click1, diag_web_L1 | browser, deployed build of `89642209`, `C:\Games` copy | the same route in the browser; L before talking | no freeze; after L the game was in menu mode (clock paused) with no journal |
+| diag_keymap1, diag_lkey2 | desktop | the live key bindings; L in game | KOTOR II's own key map: L = Messages, J = journal; L shows the Messages screen |
+
+Fix check, all on the fixed code:
+
+| Test | Run | Result |
+|---|---|---|
+| Browser playthrough (`e2e-web-episode.mjs`, new): Grant Access with the older picker on the `C:\Games` copy, New Game, every conversation by click with key 1, Seren on arrival, Messages with L and Close, the journal from the top bar, the journal with J (active: The Last Signal, A Ship That Will Not Turn Back; completed: A Navigator Past the Charts; quest text; Close), save and load through the menus with a typed name (no doubled characters, party kept), Hesk, Corva, the last scene, the journal at the end (3 finished, none active, no duplicates), no page silence over 10 s, game folder unchanged | web_episode_run2 | PASS (12 of 12) |
+| The same test on the deployed build of `89642209` | web_episode_old_build | FAIL (9 of 11): journal with L not opened, journal at the end threw (the test catches the bug) |
+| The same test on the first journal fix | web_episode_run1 | FAIL (9 of 11): the journal check used L (Messages); every quest twice after the load (finding 26) |
+| Episode playthrough (desktop), new check `journal_screen_shows_quests` | ep_run6 | PASS (12 of 12) |
+| Desktop save menu | save_menu_run5 | PASS (11 of 11) |
+| M1 engine test | m1_run8 | PASS (8 of 8) |
+| Browser save test (`e2e-web-folder.mjs`) | web_save_menu_run4 | PASS (9 of 9) |
+
+`prepare-deploy.mjs` (now keeps `dist/electron` when it empties `dist/`): scan PASS, 107 files, 9.8 MB.
+
+The freeze itself was not reproduced in any of these runs. The likely cause is the journal whose Close button did nothing (only Esc got out); that is fixed, and the browser playthrough now walks through the menus a player tries before talking.

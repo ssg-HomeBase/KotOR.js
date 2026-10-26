@@ -178,8 +178,9 @@ export class MenuJournal extends GameMenu {
 
     return entries.sort( (a, b) => {
       if(this.sort == JournalSort.NAME){
-        let nameA = a.category.name.getTLKValue().toLocaleLowerCase();
-        let nameB = b.category.name.getTLKValue().toLocaleLowerCase();
+        // KOTOR III Phase 2: getName() also works for a mod quest's own title (getTLKValue() throws without a string id).
+        let nameA = a.getName().toLocaleLowerCase();
+        let nameB = b.getName().toLocaleLowerCase();
         if (nameA < nameB) {
           return -1;
         }

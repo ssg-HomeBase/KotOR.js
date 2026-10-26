@@ -259,6 +259,9 @@ export class PartyManager {
       }
     }
 
+    // KOTOR III Phase 2 (finding 26): a load replaces the journal. The quests from before the load were kept, so each
+    // quest was listed twice and later updates changed only one copy (the other stayed at its old stage).
+    GameState.JournalManager.ClearEntries();
     if(gff.RootNode.hasField('JNL_Entries')){
       const entries = gff.RootNode.getFieldByLabel('JNL_Entries').getChildStructs();
       for(let i = 0; i < entries.length; i++){

@@ -13,7 +13,7 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import { parseArgs, makeLog, sleep, listRoot, listTree, diffLists, launchKotor3, clickGui, inAreaExpr, creatureCountsExpr, countDiff } from './e2e-lib.mjs';
+import { parseArgs, makeLog, sleep, listRoot, listTree, diffLists, launchKotor3, clickGui, inAreaExpr, creatureCountsExpr, countDiff, checkJournalScreen } from './e2e-lib.mjs';
 
 const { arg } = parseArgs();
 const GAME_DIR = arg('--game-dir');
@@ -158,6 +158,8 @@ try {
   await talkTo('k3_zell', 'Act I 3: Zell Okkar');
   await talkTo('k3_rhea', 'Act I 4: Rhea Vex');
   await screenshot('rhea_joined');
+  const journal = await checkJournalScreen(ev);
+  pass('journal_screen_shows_quests', journal.ok, journal);
 
   // Save, change, load.
   const beforeSave = await state();
@@ -216,7 +218,7 @@ try {
   const dReal = diffLists(realBefore, realAfter);
   pass('no_write_stand_in_root', !dStand.added.length && !dStand.removed.length, dStand);
   pass('no_write_real_game_folder', !dReal.added.length && !dReal.removed.length, { entries: realAfter.length, ...dReal });
-  const expected = ['auto_start_k3_sv_nar', 'auto_start_k3_end', 'save_load_mid_episode', 'no_doubled_characters_after_load', 'quests_completed', 'companions_joined', 'episode_end_reached', 'every_conversation_played', 'no_base_game_conversation', 'no_write_stand_in_root', 'no_write_real_game_folder'];
+  const expected = ['auto_start_k3_sv_nar', 'auto_start_k3_end', 'save_load_mid_episode', 'no_doubled_characters_after_load', 'journal_screen_shows_quests', 'quests_completed', 'companions_joined', 'episode_end_reached', 'every_conversation_played', 'no_base_game_conversation', 'no_write_stand_in_root', 'no_write_real_game_folder'];
   const passed = expected.every((k) => checks[k]?.pass);
   note(`RESULT: ${passed ? 'PASS' : 'FAIL'} (${expected.filter((k) => checks[k]?.pass).length} of ${expected.length} checks)`);
   md.push('## Checks', '', '| Check | Result |', '|---|---|', ...expected.map((k) => `| ${k} | ${checks[k]?.pass ? 'PASS' : 'FAIL'} |`), '',

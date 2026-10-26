@@ -237,3 +237,40 @@ export function countDiff(before, after) {
   const tags = [...new Set([...Object.keys(before || {}), ...Object.keys(after || {})])];
   return tags.filter((t) => (before?.[t] || 0) !== (after?.[t] || 0)).map((t) => ({ tag: t, before: before?.[t] || 0, after: after?.[t] || 0 }));
 }
+
+/**
+ * Opens the journal from the in-game menu bar and checks what the screen shows (KOTOR III Phase 2, finding 25: the
+ * journal drew no rows for the mod's quests, and Close did nothing). Active list, the first quest's text, the
+ * completed list (completed/active button), then Close. ev evaluates in the game page. With pressKey (a function that
+ * presses the journal key; KOTOR II binds J in its own key map), the journal is opened with the key instead of the
+ * menu bar button.
+ */
+export async function checkJournalScreen(ev, { pressKey, keyLabel } = {}) {
+  const MM = 'KotOR.GameState.MenuManager';
+  const done = `(e => { const s = e.category && e.category.getEntryById(e.state); return !!(s && s.end); })`;
+  const rowsExpr = `${MM}.MenuJournal.LB_ITEMS.children.map(c => String((c.text && c.text.text) || '').trim().toLowerCase()).sort()`;
+  const expectExpr = (completed) => `KotOR.GameState.JournalManager.Entries.filter(e => ${done}(e) === ${completed}).map(e => e.getName().trim().toLowerCase()).sort()`;
+  if (pressKey) await pressKey(); else await ev(clickGui(`${MM}.InGameOverlay.BTN_JOU`));
+  await sleep(1500);
+  const opened = await ev(`${MM}.MenuJournal.isVisible()`);
+  const via = pressKey ? (keyLabel || "key") : "menu bar button";
+  const active = { rows: await ev(rowsExpr), expected: await ev(expectExpr(false)) };
+  let firstQuest = null;
+  if (active.rows.length) {
+    await ev(clickGui(`${MM}.MenuJournal.LB_ITEMS.children[0]`));
+    await sleep(500);
+    firstQuest = await ev(`(() => { const s = ${MM}.MenuJournal.selected; return s ? { name: s.getName(), text: s.getEntryText() } : null; })()`);
+  }
+  await ev(clickGui(`${MM}.MenuJournal.BTN_SWAPTEXT`));
+  await sleep(800);
+  const completed = { rows: await ev(rowsExpr), expected: await ev(expectExpr(true)) };
+  await ev(clickGui(`${MM}.MenuJournal.BTN_SWAPTEXT`));
+  await sleep(500);
+  await ev(clickGui(`${MM}.MenuJournal.BTN_EXIT`));
+  await sleep(1200);
+  const closed = await ev(`!${MM}.MenuJournal.isVisible() && KotOR.GameState.Mode === 1`);
+  const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+  const ok = opened && active.expected.length + completed.expected.length > 0 && same(active.rows, active.expected) && same(completed.rows, completed.expected)
+    && (!active.rows.length || (!!firstQuest && !!firstQuest.text)) && closed;
+  return { ok, via, opened, active, completed, firstQuest: firstQuest ? { name: firstQuest.name, hasText: !!firstQuest.text } : null, closed };
+}

@@ -1,6 +1,11 @@
 import type { GUIListBox, GUILabel, GUIButton } from "@/gui";
 import { MenuJournal as K1_MenuJournal } from "@/game/kotor/KOTOR";
 import { GUIJournalItem } from "@/game/tsl/gui/GUIJournalItem";
+import type { JournalEntry } from "@/engine/JournalEntry";
+
+// The KOTOR I journal's JournalQuestMode values (src/game/kotor/menu/MenuJournal.ts).
+const MODE_ACTIVE = 0;
+const MODE_COMPLETED = 1;
 
 enum JournalSort {
   RECIEVED = 0,
@@ -56,10 +61,27 @@ export class MenuJournal extends K1_MenuJournal {
         this.manager.MenuMessages.open();
       });
       
+      // KOTOR III Phase 2 (finding 25): the KOTOR I setup is skipped above, so Close, picking a quest and the
+      // completed/active button had no handlers. Same behaviour as the KOTOR I journal.
+      this.BTN_EXIT.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.close();
+      });
+      this._button_b = this.BTN_EXIT;
+
       this.LB_ITEMS.setProtoBuilder(GUIJournalItem);
-      this.LB_ITEMS.onSelect = (node: any) => {
-        console.log(node);
+      this.LB_ITEMS.onSelected = (item: JournalEntry) => {
+        this.selected = item;
+        this.UpdateSelected();
       };
+
+      this.BTN_SWAPTEXT.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.mode = this.mode == MODE_COMPLETED ? MODE_ACTIVE : MODE_COMPLETED;
+        this.selected = undefined;
+        this.updateList();
+        this.UpdateLabels();
+      });
 
       this.BTN_FILTER_TIME.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -91,6 +113,17 @@ export class MenuJournal extends K1_MenuJournal {
 
   show() {
     super.show();
+  }
+
+  /** KOTOR II has filter buttons instead of KOTOR I's sort button (BTN_SORT), so only the completed/active button changes. */
+  UpdateLabels(){
+    this.BTN_SWAPTEXT?.setText(this.GetQuestModeBTNLabel());
+  }
+
+  /** Active quests by default; the completed/active button shows the finished ones (a quest is finished at a stage marked End). */
+  getFilteredEntries(){
+    const finished = (e: JournalEntry) => !!e.category?.getEntryById(e.state)?.end;
+    return super.getFilteredEntries().filter( (e: JournalEntry) => (this.mode == MODE_COMPLETED) == finished(e) );
   }
   
 }
