@@ -327,3 +327,5 @@ Fix check, all on the fixed code:
 `prepare-deploy.mjs` (now keeps `dist/electron` when it empties `dist/`): scan PASS, 107 files, 9.8 MB.
 
 The freeze itself was not reproduced in any of these runs. The likely cause is the journal whose Close button did nothing (only Esc got out); that is fixed, and the browser playthrough now walks through the menus a player tries before talking.
+
+Deployed as preview `dpl_DFR4mMCAzVRrUKU7omEHS7vV8Nxx` (READY, target preview, 302 to Vercel login, 107 files, 0 blocked, no co-op file, 0 production deployments).
