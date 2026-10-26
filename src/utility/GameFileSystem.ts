@@ -264,18 +264,78 @@ export class GameFileSystem {
       if(!(output instanceof Uint8Array)) throw new Error('No output buffer supplied!');
 
       const fileHandle = handle as FileSystemFileHandle;
-      let file = GameFileSystem.fileSnapshotCache.get(fileHandle);
-      if(!file){
-        file = await fileHandle.getFile();
-        if(file){
-          GameFileSystem.fileSnapshotCache.set(fileHandle, file);
+      await GameFileSystem.withReadRetry(fileHandle, async () => {
+        let file = GameFileSystem.fileSnapshotCache.get(fileHandle);
+        if(!file){
+          file = await fileHandle.getFile();
+          if(file){
+            GameFileSystem.fileSnapshotCache.set(fileHandle, file);
+          }
         }
-      }
-      if(!file) throw new Error('Failed to read file from handle!');
+        if(!file) throw new Error('Failed to read file from handle!');
 
-      let blob = file.slice(position, position + length);
-      let arrayBuffer = await blob.arrayBuffer();
-      output.set(new Uint8Array(arrayBuffer), offset);
+        let blob = file.slice(position, position + length);
+        let arrayBuffer = await blob.arrayBuffer();
+        output.set(new Uint8Array(arrayBuffer), offset);
+      });
+    }
+  }
+
+  /**
+   * KOTOR III Phase 2 (finding 29): a game file the browser cannot read (a cloud-only Google Drive or OneDrive file,
+   * say) used to throw once and leave the game on the loading screen for good. Now the read is tried again a few
+   * times with a fresh copy of the file, and if it still fails the player gets a message saying which file and what
+   * to do, with a Reload button.
+   */
+  static readonly READ_RETRY_DELAYS_MS = [400, 1500, 4000];
+  static async withReadRetry<T>(fileHandle: FileSystemFileHandle, attempt: () => Promise<T>): Promise<T> {
+    let lastError: any;
+    for(let i = 0; i <= GameFileSystem.READ_RETRY_DELAYS_MS.length; i++){
+      try{
+        return await attempt();
+      }catch(e){
+        lastError = e;
+        GameFileSystem.fileSnapshotCache.delete(fileHandle);
+        const wait = GameFileSystem.READ_RETRY_DELAYS_MS[i];
+        if(wait === undefined) break;
+        console.warn(`GameFileSystem: reading ${fileHandle?.name} failed, trying again in ${wait} ms`, e);
+        await new Promise((resolve) => setTimeout(resolve, wait));
+      }
+    }
+    GameFileSystem.reportReadFailure(fileHandle?.name, lastError);
+    throw lastError;
+  }
+
+  private static readFailureShown = false;
+  static reportReadFailure(fileName: string = '', error?: any){
+    console.error(`GameFileSystem: could not read ${fileName}`, error);
+    if(GameFileSystem.readFailureShown || typeof document === 'undefined') return;
+    GameFileSystem.readFailureShown = true;
+    try{
+      const box = document.createElement('div');
+      box.className = 'k3-read-failure';
+      box.setAttribute('role', 'alertdialog');
+      box.style.cssText = 'position:fixed;inset:0;z-index:2147483647;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.75);font:16px/1.5 system-ui,sans-serif;';
+      const panel = document.createElement('div');
+      panel.style.cssText = 'max-width:560px;margin:16px;padding:24px;border:1px solid #2fb0a0;border-radius:8px;background:#0b1416;color:#e8f2f0;';
+      const title = document.createElement('h2');
+      title.textContent = 'A game file could not be read';
+      title.style.cssText = 'margin:0 0 12px;font-size:20px;';
+      const text = document.createElement('p');
+      text.textContent = `The browser could not read "${fileName || 'a file'}" from your KOTOR II folder, so the game cannot continue. ` +
+        'This usually means the folder is in Google Drive, OneDrive or another cloud folder and the file is not downloaded to this computer. ' +
+        'Copy the folder to this computer (for example C:\\Games), or in File Explorer right-click it and make it available offline. ' +
+        'Then press Reload and pick the folder again.';
+      text.style.cssText = 'margin:0 0 16px;';
+      const reload = document.createElement('button');
+      reload.textContent = 'Reload';
+      reload.style.cssText = 'padding:8px 20px;font:inherit;border:1px solid #2fb0a0;border-radius:4px;background:#13383a;color:#e8f2f0;cursor:pointer;';
+      reload.addEventListener('click', () => window.location.reload());
+      panel.append(title, text, reload);
+      box.append(panel);
+      document.body.append(box);
+    }catch(e){
+      console.error(e);
     }
   }
 
@@ -309,9 +369,11 @@ export class GameFileSystem {
     }else{
       const file = await this.open(filepath);
       if(!file) throw new Error('Failed to read file');
-      
-      let handle = await file.getFile();
-      return new Uint8Array( await handle.arrayBuffer() );
+
+      return await GameFileSystem.withReadRetry(file, async () => {
+        let handle = await file.getFile();
+        return new Uint8Array( await handle.arrayBuffer() );
+      });
     }
   }
 

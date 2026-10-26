@@ -8,6 +8,8 @@
  * conversation started by clicking the character (its own click handler, what a mouse click does) and replies
  * picked with real number-key presses, the Messages screen (L) and the journal (J, and from the top bar), a save and a load through the in-game menus
  * with a typed save name, and the episode's last scene. Fails if the page ever stops answering for 10 seconds.
+ * Also checks that no character in either area is stuck in its default pose with no animation (finding 27) and that a
+ * long unvoiced line stays up for its length (finding 28).
  *
  * Usage: node scripts/kotor3/e2e-web-episode.mjs --site "<deploy folder>" --game-dir "<a KOTOR II copy with real
  *   folders, e.g. C:\Games\Knights of the Old Republic II>" --out "<artifacts folder outside the repo>"
@@ -104,8 +106,28 @@ try {
     }
     return 'did not end in 180 s';
   };
+  /** Characters in the area playing no animation (a body stuck in its default pose) in at least 4 of 6 looks, 0.7 s apart. */
+  const frozenCharacters = async (label) => {
+    const counts = {};
+    for (let i = 0; i < 6; i++) {
+      const list = await evT(`KotOR.GameState.module.area.creatures.filter(c => c.model && !c.model.animationManager?.currentAnimation && !c.isDead()).map(c => c.getTag())`, `animations ${label}`);
+      for (const t of list) counts[t] = (counts[t] || 0) + 1;
+      await sleep(700);
+    }
+    return Object.entries(counts).filter(([, n]) => n >= 4).map(([t]) => t);
+  };
+  /** How long the first line of the conversation on screen stays up, against its length (finding 28). */
+  const firstLineTiming = async () => {
+    for (let i = 0; i < 40; i++) {
+      const r = await evT(`(() => { const M = KotOR.CutsceneManager; const e = M.currentEntry; if (!e || !M.lastSpokenString) return null;
+        return { chars: M.lastSpokenString.trim().length, delayMs: e.delay, expectedMs: KotOR.unvoicedLineDelay(M.lastSpokenString), voiced: !e.checkList.voiceOverError }; })()`, 'first line timing');
+      if (r) return r;
+      await sleep(250);
+    }
+    return null;
+  };
   /** Clicks a character the way the mouse does (selects it, then its own click handler) and plays the conversation. */
-  const clickTalk = async (tag) => {
+  const clickTalk = async (tag, onTalking) => {
     await wait(`!KotOR.CutsceneManager.active && KotOR.GameState.Mode === 1`, `in game before ${tag}`, 60000);
     const r = await evT(`(() => { const G = KotOR.GameState; const c = G.module.area.creatures.find(c => (c.getTag() || '').toLowerCase() === ${JSON.stringify(tag)});
       if (!c) return 'missing'; G.CursorManager.selectedObject = c; c.onClick(G.getCurrentPlayer()); return 'clicked'; })()`, `click ${tag}`);
@@ -116,6 +138,7 @@ try {
       if (conv) break;
       await sleep(500);
     }
+    if (onTalking) await onTalking();
     const result = await playToEnd(tag);
     note(`  ${tag}: ${result}`);
     return result;
@@ -156,10 +179,14 @@ try {
   const convAtStart = await convSince(0);
   pass('w2_new_game_no_base_game_conversation', !convAtStart.length, { conversations: convAtStart });
   await screenshot('201tel');
+  const frozen201 = await frozenCharacters('201tel');
 
   // ---- Prologue by clicking (checklist 15 to 18) ----
   const prologue = [];
-  for (const tag of ['k3_seren', 'k3_brannick', 'k3_senn']) prologue.push([tag, await clickTalk(tag)]);
+  let timing = null;
+  for (const tag of ['k3_seren', 'k3_brannick', 'k3_senn']) prologue.push([tag, await clickTalk(tag, tag === 'k3_seren' ? async () => { timing = await firstLineTiming(); } : undefined)]);
+  // Seren's first line is long and has no voice: it stays up for its length, not the old flat 3 seconds (finding 28).
+  pass('w13_long_unvoiced_line_stays_longer', !!timing && !timing.voiced && timing.chars > 100 && timing.delayMs === timing.expectedMs && timing.delayMs >= 6000, timing);
   await waitArea('301nar', 'travel to Nar Shaddaa');
   pass('w3_prologue_by_click_and_travel', prologue.every(([, r]) => r === 'ended'), { prologue, area: '301nar' });
 
@@ -174,6 +201,9 @@ try {
   const arrival = await convSince(nAfterPrologue);
   pass('w4_seren_talks_on_arrival', arrival.some((c) => /k3_sv_nar/i.test(c)), { conversations: arrival });
   await screenshot('301nar');
+  // Every character plays an animation: none is left in its stiff default pose (finding 27).
+  const frozen301 = await frozenCharacters('301nar');
+  pass('w12_every_character_animated', !frozen201.length && !frozen301.length, { '201tel': frozen201, '301nar': frozen301 });
 
   // ---- Nar Shaddaa by clicking (checklist 20) ----
   const act1 = [];
@@ -255,7 +285,7 @@ try {
   pass('w11_no_write_game_folder', !d.added.length && !d.removed.length, { entries: folderAfter.length, ...d });
   const expected = ['w1_browser_reads_game_folder', 'w2_new_game_no_base_game_conversation', 'w3_prologue_by_click_and_travel', 'w4_seren_talks_on_arrival',
     'w5_nar_shaddaa_by_click_rhea_joins', 'w6a_messages_and_journal_menus_close', 'w6_journal_screen_mid_episode', 'w7_menu_save_and_load', 'w8_episode_end_by_click', 'w9_journal_screen_at_end',
-    'w10_no_freeze', 'w11_no_write_game_folder'];
+    'w10_no_freeze', 'w11_no_write_game_folder', 'w12_every_character_animated', 'w13_long_unvoiced_line_stays_longer'];
   const passed = expected.every((k) => checks[k]?.pass);
   note(`RESULT: ${passed ? 'PASS' : 'FAIL'} (${expected.filter((k) => checks[k]?.pass).length} of ${expected.length} checks)`);
   fs.writeFileSync(path.join(OUT, 'e2e-web-episode-result.json'), JSON.stringify({ passed, checks }, null, 2));

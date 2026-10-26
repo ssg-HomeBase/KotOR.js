@@ -21,6 +21,13 @@ import { AudioEmitter } from "@/audio/AudioEmitter";
 import { ICameraParticipant } from "@/interface/dialog/ICameraParticipant";
 
 const ENTRY_DELAY = 3000;
+// KOTOR III Phase 2 (finding 28): a line with no voice-over and no time of its own stayed up 3 seconds however long
+// it was. Now it gets time for its length: short lines keep 3 seconds, long ones get up to 12. A click still skips it.
+const READ_BASE_MS = 1000;
+const READ_MS_PER_CHAR = 45;
+const READ_MAX_MS = 12000;
+export const unvoicedLineDelay = (text: string = '') =>
+  Math.min(READ_MAX_MS, Math.max(ENTRY_DELAY, READ_BASE_MS + READ_MS_PER_CHAR * String(text).trim().length));
 const HALF_PI = Math.PI / 2;
 const QUARTER_PI = Math.PI / 4;
 
@@ -265,7 +272,8 @@ export class CutsceneManager {
 
     //Node Delay
     // Use the file's delay, not the live value from the last time this line was shown, and restart the clock.
-    const nodeDelay = (this.cutsceneMode != CutsceneMode.ANIMATED && entry.baseDelay > -1) ? entry.baseDelay * 1000 : ENTRY_DELAY;
+    const nodeDelay = this.cutsceneMode == CutsceneMode.ANIMATED ? ENTRY_DELAY :
+      entry.baseDelay > -1 ? entry.baseDelay * 1000 : unvoicedLineDelay(this.lastSpokenString);
     entry.setNodeDelay(nodeDelay);
     entry.elapsed = 0;
     if(isComputerCameraEntry){

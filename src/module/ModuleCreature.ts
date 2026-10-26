@@ -1109,11 +1109,12 @@ export class ModuleCreature extends ModuleObject {
       return;
 
     if(this.animationState.animation){
-      if(currentAnimation != this.animationState.animation.name?.toLowerCase()){
+      const wanted = this.availableAnimationName(this.animationState.animation.name?.toLowerCase(), this.animationState.index);
+      if(currentAnimation != wanted){
         if(!this.animationState.started){
           this.animationState.started = true;
           let aLooping = (!parseInt(this.animationState.animation.fireforget) && parseInt(this.animationState.animation.looping) == 1);
-          this.model.playAnimation(this.animationState.animation.name?.toLowerCase(), aLooping);
+          this.model.playAnimation(wanted, aLooping);
         }else{
           this.setAnimationState(ModuleCreatureAnimState.PAUSE);
         }
@@ -1123,6 +1124,23 @@ export class ModuleCreature extends ModuleObject {
       this.setAnimationState(ModuleCreatureAnimState.PAUSE);
     }
 
+  }
+
+  /**
+   * KOTOR III Phase 2 (finding 27): the name to play for an animation state, or a near one the model has.
+   * Some bodies (Ithorians, droids) have only their own short set, e.g. cpause1 and cwalk; asking for a missing
+   * one (pause3) played nothing, so the body froze in its stiff default pose and slid when it moved.
+   */
+  availableAnimationName(name: string = '', state: ModuleCreatureAnimState = ModuleCreatureAnimState.PAUSE): string {
+    const map = this.model?.odysseyAnimationMap;
+    if(!map || !name || map.has(name)) return name;
+    const moving = state == ModuleCreatureAnimState.WALKING || state == ModuleCreatureAnimState.WALK_INJ;
+    const running = state == ModuleCreatureAnimState.RUNNING || state == ModuleCreatureAnimState.RUN_INJ;
+    const candidates = [ 'c' + name ];
+    if(running) candidates.push('crun', 'run', 'cwalk', 'walk');
+    else if(moving) candidates.push('cwalk', 'walk', 'crun', 'run');
+    else candidates.push('cpause1', 'pause1');
+    return candidates.find( (n) => map.has(n) ) || name;
   }
 
   damage(amount = 0, oAttacker: ModuleObject, delayTime = 0){
