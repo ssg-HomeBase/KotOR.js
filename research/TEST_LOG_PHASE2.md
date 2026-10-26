@@ -329,3 +329,34 @@ Fix check, all on the fixed code:
 The freeze itself was not reproduced in any of these runs. The likely cause is the journal whose Close button did nothing (only Esc got out); that is fixed, and the browser playthrough now walks through the menus a player tries before talking.
 
 Deployed as preview `dpl_DFR4mMCAzVRrUKU7omEHS7vV8Nxx` (READY, target preview, 302 to Vercel login, 107 files, 0 blocked, no co-op file, 0 production deployments).
+
+## Flying character, black screen and line timing (after Cam's laptop playtest, 2026-10-26 from 18:30)
+
+Cam played the preview on a laptop with the game folder in Google Drive (files not downloaded; he said so when loading stalled on the text file). His notes: "the flying character on the first location, when talking to him he glides across the floor", "i completed part of his dialouge and the screen went black, i can hear the menu in the back", and "the characters dialogue's are too fast ... I don't want a drastic change". FEASIBILITY findings 27, 28 and 29.
+
+Diagnostic runs (scratch scripts in `C:\dev\kotor3\phase2\tools\`, not in the repo; artifacts in `C:\dev\kotor3\test-artifacts\phase2\`), all on the deployed build of `f47eeceb` and the `C:\Games` copy:
+
+| Run | What it did | Seen |
+|---|---|---|
+| diag_glide1 | every character in 201tel listed (place, height above the floor, animation); Brannick before and after Seren, Senn, Seren, with keys 1 and 2 | the mod's characters stand on the floor, never move while talking, and the screen state after each talk is normal; both Ithorians and a protocol droid play no animation (stiff default pose) |
+| diag_glide2, diag_glide3 | the walking technician, the dock officer, then every original character in 201tel (player placed beside each) | the technician and the officer have no conversation here; the Ithorians' talk starts an original-game fight; the protocol droid's menu loops; no glide, no black screen |
+| sim_fail1 | a Nar Shaddaa file made unreadable (simulated cloud-only file, in the page), then Seren and Senn | Senn's last line starts the trip; the read error is only logged; the game stays on the faded-out loading screen for good |
+| sim_fail2, sim_fail4 | 35% and 4% of model reads made unreadable during New Game | New Game hangs on the loading screen |
+| sim_fail3 | 4% of model reads unreadable during New Game | the game loads; Brannick comes up playing no animation |
+
+Fix check, on the fixed code (production build from `prepare-deploy.mjs`: scan PASS, 107 files, 9.8 MB):
+
+| Test | Run | Result |
+|---|---|---|
+| Kept-open page, characters with no animation, 10 looks 0.8 s apart in 201tel | drive_new1 | none (one walker for a single look); before the fix the Ithorians and the droid were often in it (diag_glide1, diag_glide3) |
+| Seren's first line (154 characters, no voice) | drive_new1 | stays up 7,930 ms (was 3,000) |
+| Browser read test (`e2e-web-read-fail.mjs`, new): the first area's files fail once each, then New Game; the Nar Shaddaa files never read, then Seren and Senn | web_read_fail_run1 | PASS (4 of 4): New Game reached 201tel after 4 failed reads; the trip stopped with the message naming `301NAR.rim`, what to do and a Reload button; the page kept answering; the game folder unchanged |
+| Browser playthrough (`e2e-web-episode.mjs`), new checks w12 (every character in both areas plays an animation) and w13 (Seren's first line stays up for its length) | web_episode_run3 | PASS (14 of 14) |
+| Browser save test (`e2e-web-folder.mjs`) | web_save_menu_run5 | PASS (9 of 9) |
+| Episode playthrough (desktop) | ep_run7 | PASS (12 of 12) |
+| Desktop save menu | save_menu_run6 | PASS (11 of 11) |
+| M1 engine test | m1_run9 | PASS (8 of 8) |
+
+What was not reproduced: the "flying" look on Cam's screen itself. On this PC, with the folder on the disk, the mod's characters always load with their animations; the Ithorians' and the droid's missing animations are the stiff pose this run could see, and an unreadable model file is the other way to get it. The checklist (step 1) now says the game folder must be on the computer, or set to available offline.
+
+Deployed as preview `dpl_FA3YgUfVYdyaLdGad8fRExGasCob` (READY, target preview, 302 to Vercel login, 107 files, 0 blocked, 0 production deployments), built from `2de30971`.
