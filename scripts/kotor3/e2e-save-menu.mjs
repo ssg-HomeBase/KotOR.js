@@ -20,7 +20,7 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import { parseArgs, makeLog, sleep, listRoot, listTree, diffLists, launchKotor3, clickGui, inAreaExpr, saveMenuHelpers } from './e2e-lib.mjs';
+import { parseArgs, makeLog, sleep, listRoot, listTree, diffLists, launchKotor3, clickGui, inAreaExpr, saveMenuHelpers, creatureCountsExpr, countDiff } from './e2e-lib.mjs';
 
 const { arg } = parseArgs();
 const GAME_DIR = arg('--game-dir');
@@ -82,6 +82,7 @@ try {
   try { await ev(`KotOR.AudioEngine.Mute(), true`); } catch { /* optional */ }
   await wait(`!KotOR.CutsceneManager.active && KotOR.GameState.Mode === 1`, 'in game (no conversation)', 60000);
   await sleep(3000);
+  const countsInGame = await ev(creatureCountsExpr);
 
   // ---- Options -> Save Game -> New Save -> SAVE ----
   note('Options -> Save Game');
@@ -197,6 +198,9 @@ try {
   const loaded = await ev(`(${inAreaExpr(AREA)}) || false`).catch(() => false);
   await sleep(3000);
   await screenshot('after_load');
+  const countsAfterLoad = await ev(creatureCountsExpr);
+  const doubled = countDiff(countsInGame, countsAfterLoad);
+  pass('s8b_no_doubled_characters_after_load', loaded && !doubled.length, { differences: doubled, modCharactersAfterLoad: Object.fromEntries(Object.entries(countsAfterLoad).filter(([t]) => t.startsWith('k3_'))) });
   pass('s8_load_menu_loads_save', !loadRows.includes('[New Save]') && selLoad === NAME1 && loaded && !(await ev(visible('MenuSaveLoad'))), { rows: loadRows, selected: selLoad, inArea: loaded });
 } catch (e) {
   note(`ERROR: ${e.message}`);
@@ -211,7 +215,7 @@ try {
   pass('s9_no_write_to_stand_in_root', !dStand.added.length && !dStand.removed.length, dStand);
   pass('s9_no_write_to_real_game_folder', !dReal.added.length && !dReal.removed.length, { entries: realAfter.length, ...dReal });
   const expected = ['s1_name_box_opens', 's2_name_typed_with_keys', 's3_ok_saves_and_closes', 's4_new_slot_kept_second_save', 's5_cancel_closes_without_saving',
-    's6_overwrite_asks_then_saves_same_slot', 's7_delete_asks_then_deletes_that_save', 's8_load_menu_loads_save', 's9_no_write_to_stand_in_root', 's9_no_write_to_real_game_folder'];
+    's6_overwrite_asks_then_saves_same_slot', 's7_delete_asks_then_deletes_that_save', 's8_load_menu_loads_save', 's8b_no_doubled_characters_after_load', 's9_no_write_to_stand_in_root', 's9_no_write_to_real_game_folder'];
   const passed = expected.every((k) => checks[k]?.pass);
   note(`RESULT: ${passed ? 'PASS' : 'FAIL'} (${expected.filter((k) => checks[k]?.pass).length} of ${expected.length} checks)`);
   fs.writeFileSync(path.join(OUT, 'e2e-save-menu-result.json'), JSON.stringify({ passed, checks }, null, 2));

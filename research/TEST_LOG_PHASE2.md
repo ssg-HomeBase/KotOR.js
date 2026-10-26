@@ -1,6 +1,6 @@
 # Test log, Phase 2 (KOTOR III fan)
 
-All runs on 2026-10-25 in the KotOR.js desktop app (Electron) on the stand-in game folder `C:devkotor3	est-artifactsgamedir-view` (junctions to the player's own KOTOR II data, its own root). Tests never run on the real game folder; they only list it (read only) before and after. Screenshots and full logs stay in `C:devkotor3	est-artifactsphase2` outside the repo, because screenshots show game assets.
+All runs on 2026-10-25 in the KotOR.js desktop app (Electron) on the stand-in game folder `C:\dev\kotor3\test-artifacts\gamedir-view` (junctions to the player's own KOTOR II data, its own root). Tests never run on the real game folder; they only list it (read only) before and after. Screenshots and full logs stay in `C:\dev\kotor3\test-artifacts\phase2` outside the repo, because screenshots show game assets.
 
 Tools: `scripts/kotor3/e2e-phase2.mjs` (M1 engine checks), `scripts/kotor3/e2e-episode.mjs` (M2 playthrough), `scripts/kotor3/e2e-electron.mjs` (Phase 1 scene, regression), `scripts/kotor3/check-text.mjs` (originality against dialog.tlk, in memory), `scripts/kotor3/check-dlg.mjs` (independent GFF reader), `node scripts/kotor3/run.mjs build-mod` / `verify-mod`.
 
@@ -275,3 +275,24 @@ RESULT: PASS (8 of 8).
 Reruns after the fix (new saves are now numbered from 2): M1 test m1_run5 PASS (7 of 7; its save is `000002 - Game1`), episode playthrough ep_run3 PASS (10 of 10). `prepare-deploy.mjs`: scan PASS, 108 files, 9.8 MB.
 
 Deployed as preview `dpl_9tokezRsp91SmUcRFDw6NpdCkDkG` (READY, target preview, 302 to Vercel login, 108 files, 0 blocked, 0 production deployments).
+
+## Doubled characters after a load (after Cam's report, 2026-10-25 19:25; fixed 2026-10-26 from 10:32)
+
+Cam's report (checklist step 22): after loading a save, every character appeared twice, one copy in a different pose. FEASIBILITY finding 24.
+
+Reproduction (diagnostic run diag_dupes1, build at `b494f133`): New Game, save, load, characters in `201tel` counted by tag. Before the save each mod character was there once; after the load `k3_seren`, `k3_brannick` and `k3_senn` were there twice (the saved copy, with no template name, and a second copy the mod placed again). KOTOR II's own characters were not doubled. The after-load screenshot showed two copies on one spot.
+
+Fix check on a save made before the fix (diagnostic run diag_oldsave, a copy of diag_dupes1's profile, fixed build): main menu, Load Game, "K3 dupes", Load: each mod character once (`k3_seren` 1, `k3_brannick` 1, `k3_senn` 1), every count the same as before that save was made; the screenshot shows one character standing normally.
+
+New check in every save and load test: the characters in the area by tag, before the save and after the load, must be the same.
+
+| Test | Run | Result | New check |
+|---|---|---|---|
+| Desktop save menu (`e2e-save-menu.mjs`) | save_menu_run3 | PASS (11 of 11) | s8b: no differences; k3_seren 1, k3_brannick 1, k3_senn 1 |
+| M1 engine test (`e2e-phase2.mjs`) | m1_run6 | PASS (8 of 8) | f2: no differences; k3_brannick 1, k3_senn 1 (Seren is in the party) |
+| Episode playthrough (`e2e-episode.mjs`), save and load on Nar Shaddaa | ep_run4 | PASS (11 of 11) | no differences; k3_kiri 1, k3_zell 1, k3_hesk 1, k3_corva 1 |
+| Browser (`e2e-web-folder.mjs`, production build, the `C:\Games` copy) | web_save_menu_run2 | PASS (9 of 9) | no differences after the menu load; k3_seren 1, k3_brannick 1, k3_senn 1 |
+
+`prepare-deploy.mjs` (now from an empty `dist/`): scan PASS, 107 files, 9.8 MB.
+
+Round 5 grader notes cleared at the same time: `prepare-deploy.mjs` now empties `dist/` before building (a stale co-op file had ridden along), docs/FEASIBILITY.md no longer says the browser save path was checked from the console only, and the paths on line 3 of this log are fixed.

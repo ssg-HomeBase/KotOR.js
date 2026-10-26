@@ -14,7 +14,7 @@ import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import http from 'node:http';
-import { parseArgs, makeLog, sleep, cdp, evaluate, waitFor, listTree, diffLists, clickGui, saveMenuHelpers } from './e2e-lib.mjs';
+import { parseArgs, makeLog, sleep, cdp, evaluate, waitFor, listTree, diffLists, clickGui, saveMenuHelpers, creatureCountsExpr, countDiff } from './e2e-lib.mjs';
 
 const { arg } = parseArgs();
 const SITE = arg('--site'), GAME_DIR = arg('--game-dir'), OUT = arg('--out');
@@ -96,6 +96,7 @@ try {
   const NAME = 'K3 Web Save';
   const opfsFiles = () => ev(`(async () => { const r = await navigator.storage.getDirectory(); const top = await r.getDirectoryHandle('kotorjs-game-data'); const k = await top.getDirectoryHandle('kotor3'); const s = await k.getDirectoryHandle('Saves'); const out = []; for await (const d of s.values()) { if (d.kind !== 'directory') continue; for await (const f of d.values()) { const file = f.kind === 'file' ? await f.getFile() : null; out.push({ path: d.name + '/' + f.name, time: file ? file.lastModified : 0 }); } } return out; })()`);
   await waitFor(page, `!KotOR.CutsceneManager.active && KotOR.GameState.Mode === 1`, 'in game', 60000);
+  const countsInGame = await ev(creatureCountsExpr);
   await click(`${MM}.InGameOverlay.BTN_OPT`);
   await waitFor(page, visible('MenuOptions'), 'options menu', 20000);
   await sleep(800);
@@ -143,6 +144,10 @@ try {
   for (let i = 0; i < 60 && !(await ev(`(${inArea}) || false`).catch(() => false)); i++) { await ev(`(() => { const v = KotOR.GameState.VideoManager; if (v.isMoviePlaying() || v.movieQueue.length) { v.stopMovie(); v.playNextMovie(); } return true; })()`).catch(() => {}); await sleep(1500); }
   const loaded = await ev(`(${inArea}) && !KotOR.GameState.module.loading`).catch(() => false);
   pass('menu_load_in_browser', selLoad === NAME && loaded && !(await ev(visible('MenuSaveLoad'))), { selected: selLoad, inArea: loaded });
+  await sleep(3000);
+  const countsAfterLoad = await ev(creatureCountsExpr);
+  const doubled = countDiff(countsInGame, countsAfterLoad);
+  pass('no_doubled_characters_after_load_in_browser', loaded && !doubled.length, { differences: doubled, modCharactersAfterLoad: Object.fromEntries(Object.entries(countsAfterLoad).filter(([t]) => t.startsWith('k3_'))) });
 } catch (e) {
   note(`ERROR: ${e.message}`);
 } finally {
@@ -152,7 +157,7 @@ try {
   const folderAfter = listTree(GAME_DIR);
   const d = diffLists(folderBefore, folderAfter);
   pass('no_write_game_folder', !d.added.length && !d.removed.length, { entries: folderAfter.length, ...d });
-  const expected = ['grant_box_offers_older_picker', 'grant_box_closes_after_folder', 'game_reads_folder_in_browser', 'area_loads_with_mod_in_browser', 'menu_save_in_browser_storage', 'menu_overwrite_in_browser', 'menu_load_in_browser', 'no_write_game_folder'];
+  const expected = ['grant_box_offers_older_picker', 'grant_box_closes_after_folder', 'game_reads_folder_in_browser', 'area_loads_with_mod_in_browser', 'menu_save_in_browser_storage', 'menu_overwrite_in_browser', 'menu_load_in_browser', 'no_doubled_characters_after_load_in_browser', 'no_write_game_folder'];
   const passed = expected.every((k) => checks[k]?.pass);
   note(`RESULT: ${passed ? 'PASS' : 'FAIL'} (${expected.filter((k) => checks[k]?.pass).length} of ${expected.length} checks)`);
   fs.writeFileSync(path.join(OUT, 'e2e-web-folder-result.json'), JSON.stringify({ passed, checks }, null, 2));

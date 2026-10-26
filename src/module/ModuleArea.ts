@@ -96,6 +96,16 @@ export class ModuleArea extends ModuleObject {
   static ModuleTrigger: typeof ModuleTrigger = ModuleTrigger;
   static ModuleWaypoint: typeof ModuleWaypoint = ModuleWaypoint;
 
+  /** KOTOR III Phase 2: the Tag in a mod creature's template (lower case), or its resref when the template has none. */
+  static modPlacementTag(templateResRef: string): string {
+    try{
+      const buffer = ResourceLoader.loadCachedResource(ResourceTypes['utc'], templateResRef);
+      const tag = buffer ? String(new GFFObject(buffer).RootNode.getFieldByLabel('Tag')?.getValue() || '') : '';
+      if(tag) return tag.toLowerCase();
+    }catch(e){ /* no template: fall back to the resref */ }
+    return String(templateResRef || '').toLowerCase();
+  }
+
   module: Module;
   are: GFFObject;
   git: GFFObject;
@@ -1133,8 +1143,12 @@ export class ModuleArea extends ModuleObject {
       // KOTOR III Phase 2: not placed again once a mod global says so (e.g. the companion joined the party).
       if(placement.skipIfGlobal && GameState.GlobalVariableManager.GetGlobalBoolean(placement.skipIfGlobal)) continue;
       // A save made with the mod already lists the creature in its GIT; do not add a second copy.
+      // KOTOR III Phase 2 (finding 24): a saved creature carries its Tag but no TemplateResRef (the loader reads a
+      // TemplateResRef as "merge the template", so saves leave it out), so match on the template's Tag as well.
+      const placementTag = ModuleArea.modPlacementTag(placement.templateResRef);
       const alreadyPlaced = (creatures?.childStructs || []).some( (s) =>
-        String(s.getFieldByLabel('TemplateResRef')?.getValue() || '').toLowerCase() == placement.templateResRef.toLowerCase()
+        String(s.getFieldByLabel('TemplateResRef')?.getValue() || '').toLowerCase() == placement.templateResRef.toLowerCase() ||
+        String(s.getFieldByLabel('Tag')?.getValue() || '').toLowerCase() == placementTag
       );
       if(alreadyPlaced) continue;
       const instance = new GFFObject();

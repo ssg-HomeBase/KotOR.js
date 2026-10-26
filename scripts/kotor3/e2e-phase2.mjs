@@ -18,7 +18,7 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import { parseArgs, makeLog, sleep, listRoot, listTree, diffLists, launchKotor3, clickGui, inAreaExpr } from './e2e-lib.mjs';
+import { parseArgs, makeLog, sleep, listRoot, listTree, diffLists, launchKotor3, clickGui, inAreaExpr, creatureCountsExpr, countDiff } from './e2e-lib.mjs';
 
 const { arg } = parseArgs();
 const GAME_DIR = arg('--game-dir');
@@ -156,6 +156,7 @@ try {
     serenInAreaCount: G.module.area.creatures.filter(c => (c.getTag() || '').toLowerCase() === ${JSON.stringify(NPC_TAG)}).length,
     gold: G.PartyManager.Gold, area: G.module.area.name }; })()`;
   const beforeSave = await ev(stateOf);
+  const countsBeforeSave = await ev(creatureCountsExpr);
   note(`state before save: ${JSON.stringify(beforeSave)}`);
   await screenshot('seren_in_party');
 
@@ -186,6 +187,9 @@ try {
   pass('f_mod_state_survives_save_load',
     afterLoad.quest === 20 && afterLoad.stage === 2 && afterLoad.metSeren === true && afterLoad.partyTags.includes(NPC_TAG) && afterLoad.serenInAreaCount === 0 && afterLoad.gold === beforeSave.gold && !!afterLoad.journalText && !convAfterLoad,
     { beforeSave, afterLoad, conversationAfterLoad: convAfterLoad });
+  const countsAfterLoad = await ev(creatureCountsExpr);
+  const doubled = countDiff(countsBeforeSave, countsAfterLoad);
+  pass('f2_no_doubled_characters_after_load', !doubled.length, { differences: doubled, modCharactersAfterLoad: Object.fromEntries(Object.entries(countsAfterLoad).filter(([t]) => t.startsWith('k3_'))) });
   await screenshot('after_load');
 } catch (e) {
   note(`ERROR: ${e.message}`);
@@ -200,7 +204,7 @@ try {
   const dReal = diffLists(realBefore, realAfter);
   pass('a1_no_write_to_stand_in_root', !dStand.added.length && !dStand.removed.length, dStand);
   pass('a1_no_write_to_real_game_folder', !dReal.added.length && !dReal.removed.length, { entries: realAfter.length, ...dReal });
-  const expected = ['a1_no_write_to_stand_in_root', 'a1_no_write_to_real_game_folder', 'a2_saves_in_app_storage', 'b_number_keys_pick_replies', 'd_compiled_script_effect', 'e_no_arrival_conversation', 'f_mod_state_survives_save_load'];
+  const expected = ['a1_no_write_to_stand_in_root', 'a1_no_write_to_real_game_folder', 'a2_saves_in_app_storage', 'b_number_keys_pick_replies', 'd_compiled_script_effect', 'e_no_arrival_conversation', 'f_mod_state_survives_save_load', 'f2_no_doubled_characters_after_load'];
   const passed = expected.every((k) => checks[k]?.pass);
   note(`RESULT: ${passed ? 'PASS' : 'FAIL'} (${expected.filter((k) => checks[k]?.pass).length} of ${expected.length} checks)`);
   fs.writeFileSync(path.join(OUT, 'e2e-phase2-result.json'), JSON.stringify({ passed, checks }, null, 2));

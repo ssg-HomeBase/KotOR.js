@@ -226,3 +226,14 @@ export function saveMenuHelpers({ send, ev }) {
   };
   return { MM, typeText, visible, listNames, savedNames, clickRow };
 }
+
+/**
+ * Characters in the current area by tag (lower case) -> count. KOTOR III Phase 2, finding 24: after a load, every
+ * mod character came back twice; tests compare these counts before a save and after loading it.
+ */
+export const creatureCountsExpr = `(() => { const m = {}; for (const c of KotOR.GameState.module.area.creatures) { const t = String(c.getTag() || '').toLowerCase(); m[t] = (m[t] || 0) + 1; } return m; })()`;
+/** Tags whose count differs between two creatureCountsExpr results (empty when the same). */
+export function countDiff(before, after) {
+  const tags = [...new Set([...Object.keys(before || {}), ...Object.keys(after || {})])];
+  return tags.filter((t) => (before?.[t] || 0) !== (after?.[t] || 0)).map((t) => ({ tag: t, before: before?.[t] || 0, after: after?.[t] || 0 }));
+}

@@ -123,7 +123,9 @@ function emptyDeployFolder() {
 
 // ---------- 1. build ----------
 if (opts.build) {
-  console.log('prepare-deploy: npm run webpack:prod');
+  // Start from an empty dist/ (git-ignored build output), so files from another branch's build cannot ride along.
+  if (path.resolve(DIST) === path.join(path.resolve(REPO), 'dist')) fs.rmSync(DIST, { recursive: true, force: true });
+  console.log('prepare-deploy: npm run webpack:prod (dist/ emptied first)');
   const r = spawnSync('npm', ['run', 'webpack:prod'], { cwd: REPO, stdio: 'inherit', shell: process.platform === 'win32' });
   if (r.status !== 0) { console.error(`prepare-deploy: build failed (exit ${r.status ?? r.signal}).`); process.exit(1); }
 } else {
