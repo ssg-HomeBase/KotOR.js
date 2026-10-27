@@ -359,4 +359,6 @@ Fix check, on the fixed code (production build from `prepare-deploy.mjs`: scan P
 
 What was not reproduced: the "flying" look on Cam's screen itself. On this PC, with the folder on the disk, the mod's characters always load with their animations; the Ithorians' and the droid's missing animations are the stiff pose this run could see, and an unreadable model file is the other way to get it. The checklist (step 1) now says the game folder must be on the computer, or set to available offline.
 
+The desktop runs ep_run7, save_menu_run6 and m1_run9 above wrote their artifacts to a mistyped folder (`test-artifacts\phase2$2`, one shared profile); after grader round 8 they were run again, each in its own folder: ep_run8 PASS (12 of 12), save_menu_run7 PASS (11 of 11), m1_run10 PASS (8 of 8).
+
 Deployed as preview `dpl_FA3YgUfVYdyaLdGad8fRExGasCob` (READY, target preview, 302 to Vercel login, 107 files, 0 blocked, 0 production deployments), built from `2de30971`.
