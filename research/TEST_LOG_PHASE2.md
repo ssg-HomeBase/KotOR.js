@@ -362,3 +362,34 @@ What was not reproduced: the "flying" look on Cam's screen itself. On this PC, w
 The desktop runs ep_run7, save_menu_run6 and m1_run9 above wrote their artifacts to a mistyped folder (`test-artifacts\phase2$2`, one shared profile); after grader round 8 they were run again, each in its own folder: ep_run8 PASS (12 of 12), save_menu_run7 PASS (11 of 11), m1_run10 PASS (8 of 8).
 
 Deployed as preview `dpl_FA3YgUfVYdyaLdGad8fRExGasCob` (READY, target preview, 302 to Vercel login, 107 files, 0 blocked, 0 production deployments), built from `2de30971`.
+
+## Original-game content, Senn's last line, menu size and full screen (after Cam's second laptop report, 2026-10-26 evening)
+
+Cam's notes: Senn's last line vanished as the trip started; "we should have a function that sets fullscreen mode like youtube"; the menus were small and words ran off the edges; after giving a refugee money a scene showed two identical refugees; afterwards a see-through refugee lay on the ground with the old conversation, then a new one started by itself. He asked the run to look through the whole available game, not just these spots. FEASIBILITY findings 30, 31 and 32, and the full-screen item.
+
+Diagnostic runs (scratch scripts in `C:\dev\kotor3\phase2\tools\`, not in the repo; artifacts in `C:\dev\kotor3\test-artifacts\phase2\`), on the `C:\Games` copy:
+
+| Run | Build | What it did | Seen |
+|---|---|---|---|
+| drive_nar1 (talk_refugee3) | deployed `793d6fef` | gave Refugee3 five credits and played the scene | KOTOR II's Kreia lesson; afterwards a second refugee (`Refugee4`) walked off, and Refugee3 lay on the ground playing its getting-up animation, fading (opacity 0.93) and still holding the old conversation |
+| drive_nar1, drive_tel1 (inventory, dialogue review) | deployed `793d6fef` | listed every character, trigger, door and object both areas run, and every base-game dialogue's size, scripts and KOTOR II story words | 301nar: 28 base-game characters with conversations, all but two one-line descriptions are KOTOR II story; 5 exits; 201tel: 6 scene or shuttle triggers, an exit door to the rest of Telos, 2 Ebon Hawk exits, 16 story or terminal conversations |
+| shots_old | deployed `793d6fef` | Options menu at 1920x1080, 1536x730 (125%) and 1280x600 (150%) | 800x600 at every size: small at 1920x1080, cut off top and bottom at 1280x600 |
+| drive_new3, drive_new4 (sweep) | fixed code | clicked every character, door and object in both areas; then the whole episode choosing the last reply at every choice (Seren turned down twice, then accepted) | every base-game character answers with a short line or its own one-liner, sealed exits say so, terminals say they stay dark; no character doubled or see-through after any talk; the episode completes on the other replies (`K3_EPISODE_DONE` true, quests 50/30/30, both companions); Senn's last line shown 7.2 s before the trip |
+| shots_new, mouse-check, click-world | fixed code | the same three sizes; real mouse clicks on the Options menu's Close; hovering a character in the world; the full-screen button | the menu fills about 83% of the height at 1920x1080 and fits at 1280x600; Close closes at all three sizes; the hovered character is the one under the mouse; full screen on and off |
+
+The test windows: at night, with the screen locked, Windows slowed the test windows to about one frame a second, so quick key presses fell between frames and Seren's first conversation never moved on (web_episode_run4 and run5, web_read_fail_run2 and run3, FAIL). Not a game fault; `scripts/kotor3/e2e-lib.mjs` now starts every test window with Chromium switches that keep it at full speed (`KEEP_RUNNING_SWITCHES`: no backgrounding, no occlusion throttling, no vsync wait); measured about 160 frames a second with the screen locked, against 1.3 before. With the test windows at full speed, a save load took longer than the tests' fixed waits, and two tests read the area while the old one was being replaced (ep_run9: Hesk talked to mid-load; m1_run11: empty area read mid-load). The tests' area check (`inAreaExpr` in `e2e-lib.mjs`, and `e2e-web-folder.mjs`) now also waits until the engine's save-loading flag is clear; web_episode_run6 (18 of 18), web_read_fail_run5 (4 of 4), web_save_menu_run6 (9 of 9) and save_menu_run8 (11 of 11) had passed before that change, and all six were run again after it. web_episode_run7 (FAIL, 5 of 18) then showed two more things: the new switched-off check had moved the player beside the Ithorian and the exit and back, which could leave him unable to walk, so the prologue never started (the check now asks for what a click does without moving him); and an uncaught error in the KOTOR II overlay (finding 33). After those fixes all six were run again on the final build.
+
+Fix check, on the fixed code (production build from `prepare-deploy.mjs`: scan PASS, 107 files, 9.8 MB; `check-text.mjs`: PASS, the new lines included):
+
+| Test | Run | Result |
+|---|---|---|
+| Browser playthrough (`e2e-web-episode.mjs`), new checks w14 (Senn's last line read before the trip), w15 (switched-off Ithorian and sealed exit answer with the mod's lines), w16 (Options menu fits and takes real mouse clicks at three window sizes), w17 (full-screen button), w18 (no uncaught page error in the whole run, finding 33) | web_episode_run8 | PASS (19 of 19) |
+| Browser read test (`e2e-web-read-fail.mjs`) | web_read_fail_run7 | PASS (4 of 4) |
+| Browser save test (`e2e-web-folder.mjs`) | web_save_menu_run8 | PASS (9 of 9) |
+| Episode playthrough (desktop) | ep_run11 | PASS (12 of 12) |
+| Desktop save menu | save_menu_run10 | PASS (11 of 11) |
+| M1 engine test | m1_run13 | PASS (8 of 8) |
+
+Not changed (noted): KOTOR II's left-aligned description text starts on its box's border line, so a first letter can look clipped; the Nar Shaddaa area load logs a missing fan walkmesh and stores without a name (both before these changes; the stores belong to switched-off conversations).
+
+Deployed as preview `dpl_ABSYb9nRnwgKSr7EkaEfGJspPac9` (READY, target preview, 302 to Vercel login, 107 files, 0 blocked, 0 production deployments), built from `7c38e3f9`.
