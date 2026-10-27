@@ -8,8 +8,11 @@
  * conversation started by clicking the character (its own click handler, what a mouse click does) and replies
  * picked with real number-key presses, the Messages screen (L) and the journal (J, and from the top bar), a save and a load through the in-game menus
  * with a typed save name, and the episode's last scene. Fails if the page ever stops answering for 10 seconds.
- * Also checks that no character in either area is stuck in its default pose with no animation (finding 27) and that a
- * long unvoiced line stays up for its length (finding 28).
+ * Also checks that no character in either area is stuck in its default pose with no animation (finding 27), that a
+ * long unvoiced line stays up for its length (finding 28), that Senn's last line is read before the trip starts
+ * (finding 31), that KOTOR II's own characters and exits in the first area answer with the mod's short lines (finding
+ * 30), that the menus scale with the window and take real mouse clicks at three window sizes (finding 32), and that
+ * the full-screen button works.
  *
  * Usage: node scripts/kotor3/e2e-web-episode.mjs --site "<deploy folder>" --game-dir "<a KOTOR II copy with real
  *   folders, e.g. C:\Games\Knights of the Old Republic II>" --out "<artifacts folder outside the repo>"
@@ -19,7 +22,7 @@ import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import http from 'node:http';
-import { parseArgs, makeLog, sleep, cdp, evaluate, waitFor, listTree, diffLists, clickGui, inAreaExpr, saveMenuHelpers,
+import { KEEP_RUNNING_SWITCHES, parseArgs, makeLog, sleep, cdp, evaluate, waitFor, listTree, diffLists, clickGui, inAreaExpr, saveMenuHelpers,
   creatureCountsExpr, countDiff, checkJournalScreen } from './e2e-lib.mjs';
 
 const { arg } = parseArgs();
@@ -55,7 +58,7 @@ app.whenReady().then(() => { const w = new BrowserWindow({ width: 1280, height: 
 const electronExe = path.join(REPO, 'node_modules', 'electron', 'dist', process.platform === 'win32' ? 'electron.exe' : 'electron');
 const folderBefore = listTree(GAME_DIR);
 note(`game folder listed before: ${folderBefore.length} entries`);
-const child = spawn(electronExe, [`--remote-debugging-port=${CDP_PORT}`, `--user-data-dir=${path.join(OUT, 'chromium-profile')}`, mainJs], { stdio: 'ignore' });
+const child = spawn(electronExe, [`--remote-debugging-port=${CDP_PORT}`, `--user-data-dir=${path.join(OUT, 'chromium-profile')}`, ...KEEP_RUNNING_SWITCHES, mainJs], { stdio: 'ignore' });
 let page;
 let frozen = null;
 const conversations = [];
@@ -94,15 +97,18 @@ try {
     for (let i = 0; i < 160 && !(await evT(`(${inAreaExpr(area)}) || false`, `waiting for ${area}`).catch((e) => { if (frozen) throw e; return false; })); i++) { await skipMovies(3); await sleep(1500); }
     await wait(inAreaExpr(area), what, 10000, 1000);
   };
+  /** The last line of the last conversation played, how long it stayed on screen, and its reading time (finding 31). */
+  let lastLineSeen = null;
   /** Plays the conversation on screen to its end, pressing 1 at every choice. */
   const playToEnd = async (label) => {
-    const end = Date.now() + 180000; let last = '';
+    const end = Date.now() + 180000; let last = ''; let line = '', since = 0, delay = 0;
     while (Date.now() < end) {
-      const st = await evT(`(() => { const m = KotOR.CutsceneManager; return { active: !!m.active, replies: m.currentEntry ? [] : (m.currentReplies || []).map(r => r.text) }; })()`, `conversation ${label}`);
-      if (!st.active) return 'ended';
+      const st = await evT(`(() => { const m = KotOR.CutsceneManager; return { active: !!m.active, line: m.currentEntry ? m.lastSpokenString : '', delay: m.currentEntry ? m.currentEntry.delay : 0, replies: m.currentEntry ? [] : (m.currentReplies || []).map(r => r.text) }; })()`, `conversation ${label}`);
+      if (st.line && st.line !== line) { line = st.line; since = Date.now(); delay = st.delay; }
+      if (!st.active) { lastLineSeen = { label, chars: line.length, shownMs: Date.now() - since, delayMs: delay }; return 'ended'; }
       const k = st.replies.join('|');
       if (st.replies.length && k !== last) { await sleep(300); await pressDigit(1); last = k; }
-      await sleep(300);
+      await sleep(150);
     }
     return 'did not end in 180 s';
   };
@@ -181,12 +187,34 @@ try {
   await screenshot('201tel');
   const frozen201 = await frozenCharacters('201tel');
 
+  // ---- KOTOR II's own characters, scenes and exits here are switched off (finding 30): a click on one gets a short line,
+  // the exit door to the rest of Telos is sealed, and none of the original scenes starts ----
+  // What a click does once the player has walked up (the player is not moved here, so the prologue below starts from
+  // the normal spot): the Ithorian's conversation is asked for after a click on him, and the exit door is tried.
+  const lineAfter = async (expr) => {
+    await evT(`(() => { const G = KotOR.GameState; window.__k3barks = []; const B = G.MenuManager.InGameBark; if (!B.__k3spy) { B.__k3spy = true; const f = B.barkFromString.bind(B); B.barkFromString = (t) => { window.__k3barks.push(t); return f(t); }; } ${expr}; return true; })()`, 'switched-off click');
+    await sleep(800);
+    return evT(`({ barks: window.__k3barks || [], conv: KotOR.CutsceneManager.active ? KotOR.CutsceneManager.conversation_name : '' })`, 'line shown');
+  };
+  const ithorian = await lineAfter(`const c = G.module.area.creatures.find(c => c.getTag() === '201_ith_door'); KotOR.CutsceneManager.notePlayerClick(c); KotOR.CutsceneManager.startConversation(c.getConversation(), c, G.getCurrentPlayer())`);
+  await sleep(1500);
+  const exitDoor = await lineAfter(`G.module.area.doors.find(d => d.getTag() === 'Urban').use(G.getCurrentPlayer())`);
+  await sleep(1500);
+  const offLog = await evT(`[...KotOR.ModSwitchOff.log.keys()].filter(k => /:201tel:/.test(k))`, 'switch-off log');
+  pass('w15_original_content_switched_off', !ithorian.conv && /^Ithorian: /.test(ithorian.barks[0] || '') && !exitDoor.conv && /^Sealed\./.test(exitDoor.barks[0] || '') &&
+    offLog.includes('conversations:201tel:201ithd') && offLog.includes('doors:201tel:urban') && offLog.includes('triggers:201tel:tr_droidint'), { ithorian, exitDoor, switchedOff: offLog });
+
   // ---- Prologue by clicking (checklist 15 to 18) ----
   const prologue = [];
-  let timing = null;
-  for (const tag of ['k3_seren', 'k3_brannick', 'k3_senn']) prologue.push([tag, await clickTalk(tag, tag === 'k3_seren' ? async () => { timing = await firstLineTiming(); } : undefined)]);
+  let timing = null, sennLast = null;
+  for (const tag of ['k3_seren', 'k3_brannick', 'k3_senn']) {
+    prologue.push([tag, await clickTalk(tag, tag === 'k3_seren' ? async () => { timing = await firstLineTiming(); } : undefined)]);
+    if (tag === 'k3_senn') sennLast = lastLineSeen;
+  }
   // Seren's first line is long and has no voice: it stays up for its length, not the old flat 3 seconds (finding 28).
   pass('w13_long_unvoiced_line_stays_longer', !!timing && !timing.voiced && timing.chars > 100 && timing.delayMs === timing.expectedMs && timing.delayMs >= 6000, timing);
+  // Senn's last line starts the trip; it stays up for its reading time before the area changes (finding 31).
+  pass('w14_last_line_read_before_travel', !!sennLast && sennLast.chars > 100 && sennLast.delayMs >= 5000 && sennLast.shownMs >= sennLast.delayMs - 600, sennLast);
   await waitArea('301nar', 'travel to Nar Shaddaa');
   pass('w3_prologue_by_click_and_travel', prologue.every(([, r]) => r === 'ended'), { prologue, area: '301nar' });
 
@@ -273,10 +301,45 @@ try {
   const journalEnd = await checkJournalScreen(evT);
   pass('w9_journal_screen_at_end', journalEnd.ok && journalEnd.completed.rows.length === 3 && journalEnd.active.rows.length === 0, journalEnd);
   await screenshot('episode_end');
+
+  // ---- Menus scale with the window (finding 32): at a desktop size and two laptop sizes the Options menu fits on screen,
+  // fills most of its height, and a real mouse click on its Close button (placed from the button's own box) closes it ----
+  const sizes = [[1920, 1080, 1], [1536, 730, 1.25], [1280, 600, 1.5]];
+  const scaled = [];
+  for (const [w, h, dpr] of sizes) {
+    await page.send('Emulation.setDeviceMetricsOverride', { width: w, height: h, deviceScaleFactor: dpr, mobile: false });
+    await ev(`window.dispatchEvent(new Event('resize')), true`); await sleep(1200);
+    await ev(clickGui(`${MM}.InGameOverlay.BTN_OPT`)); await sleep(1200);
+    const m = await evT(`(() => { const R = KotOR.GameState.ResolutionManager; const M = KotOR.GameState.MenuManager; const ui = R.uiScale; const vw = R.getViewportWidth(), vh = R.getViewportHeight();
+      const menuH = M.MenuOptions.tGuiPanel.extent.height, menuW = M.MenuOptions.tGuiPanel.extent.width; const b = M.MenuOptions.BTN_EXIT; b.calculateBox?.();
+      const cx = (b.box.min.x + b.box.max.x) / 2, cy = (b.box.min.y + b.box.max.y) / 2;
+      return { ui: +ui.toFixed(3), open: M.MenuOptions.isVisible(), fits: menuW <= vw + 1 && menuH <= vh + 1, heightShare: +(menuH / vh).toFixed(2), canvas: [KotOR.GameState.canvas.width, KotOR.GameState.canvas.height],
+        click: [ (cx + vw / 2) * ui, (vh / 2 - cy) * ui ] }; })()`, 'scaled menu');
+    for (const type of ['mouseMoved', 'mousePressed', 'mouseReleased']) {
+      await page.send('Input.dispatchMouseEvent', { type, x: m.click[0], y: m.click[1], button: type === 'mouseMoved' ? 'none' : 'left', buttons: type === 'mousePressed' ? 1 : 0, clickCount: type === 'mouseMoved' ? 0 : 1 });
+      await sleep(type === 'mouseMoved' ? 400 : 150);
+    }
+    await sleep(1000);
+    m.closedByMouse = !(await evT(`KotOR.GameState.MenuManager.MenuOptions.isVisible()`, 'menu closed'));
+    scaled.push({ size: `${w}x${h}@${dpr}`, ...m });
+  }
+  // The full-screen button: a real click puts the page in full screen, a second one takes it out.
+  const fsBtn = await ev(`(() => { const b = document.querySelector('.fullscreen-button'); if (!b) return null; const r = b.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; })()`);
+  const fsClick = async () => { await page.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: fsBtn[0], y: fsBtn[1], button: 'none' }); await sleep(300);
+    for (const type of ['mousePressed', 'mouseReleased']) await page.send('Input.dispatchMouseEvent', { type, x: fsBtn[0], y: fsBtn[1], button: 'left', buttons: type === 'mousePressed' ? 1 : 0, clickCount: 1 });
+    await sleep(1200); return ev(`!!document.fullscreenElement`); };
+  const fullscreen = fsBtn ? { on: await fsClick(), offAgain: !(await fsClick()) } : { button: 'missing' };
+  await page.send('Emulation.clearDeviceMetricsOverride');
+  await ev(`window.dispatchEvent(new Event('resize')), true`);
+  pass('w16_menus_scale_with_window', scaled.every((s) => s.open && s.fits && s.closedByMouse) && scaled[0].ui >= 1.4 && scaled[0].heightShare >= 0.75, scaled);
+  pass('w17_fullscreen_button', fullscreen.on === true && fullscreen.offAgain === true, fullscreen);
 } catch (e) {
   note(`ERROR: ${e.message}`);
 } finally {
   pass('w10_no_freeze', !frozen, frozen ? `the page stopped answering: ${frozen}` : 'the page answered every check within 10 s');
+  // No uncaught error in the page during the whole run (one in the frame update skips the rest of that frame; finding 33).
+  const uncaught = log.consoleLines.filter((l) => l.startsWith('[exception]'));
+  pass('w18_no_uncaught_page_errors', !uncaught.length, uncaught.length ? uncaught.slice(0, 5).map((l) => l.split(/\r?\n/).slice(0, 2).join(' | ').slice(0, 200)) : 'none');
   try { page?.close(); } catch { /* ignore */ }
   child.kill(); server.close();
   await sleep(2000);
@@ -285,7 +348,9 @@ try {
   pass('w11_no_write_game_folder', !d.added.length && !d.removed.length, { entries: folderAfter.length, ...d });
   const expected = ['w1_browser_reads_game_folder', 'w2_new_game_no_base_game_conversation', 'w3_prologue_by_click_and_travel', 'w4_seren_talks_on_arrival',
     'w5_nar_shaddaa_by_click_rhea_joins', 'w6a_messages_and_journal_menus_close', 'w6_journal_screen_mid_episode', 'w7_menu_save_and_load', 'w8_episode_end_by_click', 'w9_journal_screen_at_end',
-    'w10_no_freeze', 'w11_no_write_game_folder', 'w12_every_character_animated', 'w13_long_unvoiced_line_stays_longer'];
+    'w10_no_freeze', 'w11_no_write_game_folder', 'w12_every_character_animated', 'w13_long_unvoiced_line_stays_longer',
+    'w14_last_line_read_before_travel', 'w15_original_content_switched_off', 'w16_menus_scale_with_window', 'w17_fullscreen_button',
+    'w18_no_uncaught_page_errors'];
   const passed = expected.every((k) => checks[k]?.pass);
   note(`RESULT: ${passed ? 'PASS' : 'FAIL'} (${expected.filter((k) => checks[k]?.pass).length} of ${expected.length} checks)`);
   fs.writeFileSync(path.join(OUT, 'e2e-web-episode-result.json'), JSON.stringify({ passed, checks }, null, 2));

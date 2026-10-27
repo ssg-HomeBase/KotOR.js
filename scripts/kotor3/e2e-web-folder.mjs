@@ -14,7 +14,7 @@ import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import http from 'node:http';
-import { parseArgs, makeLog, sleep, cdp, evaluate, waitFor, listTree, diffLists, clickGui, saveMenuHelpers, creatureCountsExpr, countDiff } from './e2e-lib.mjs';
+import { KEEP_RUNNING_SWITCHES, parseArgs, makeLog, sleep, cdp, evaluate, waitFor, listTree, diffLists, clickGui, saveMenuHelpers, creatureCountsExpr, countDiff } from './e2e-lib.mjs';
 
 const { arg } = parseArgs();
 const SITE = arg('--site'), GAME_DIR = arg('--game-dir'), OUT = arg('--out');
@@ -50,7 +50,7 @@ const electronExe = path.join(REPO, 'node_modules', 'electron', 'dist', process.
 // follow links (junctions), so use a folder with real files, such as the C:\Games playtest copy.
 const folderBefore = listTree(GAME_DIR);
 note(`game folder listed before: ${folderBefore.length} entries`);
-const child = spawn(electronExe, [`--remote-debugging-port=${CDP_PORT}`, `--user-data-dir=${path.join(OUT, 'chromium-profile')}`, mainJs], { stdio: 'ignore' });
+const child = spawn(electronExe, [`--remote-debugging-port=${CDP_PORT}`, `--user-data-dir=${path.join(OUT, 'chromium-profile')}`, ...KEEP_RUNNING_SWITCHES, mainJs], { stdio: 'ignore' });
 let page;
 try {
   let target;
@@ -83,7 +83,7 @@ try {
   pass('game_reads_folder_in_browser', !!menu && files > 0 && env.olderPicker && env.env === 'BROWSER', { modFiles: files, ...env });
   for (let i = 0; i < 30; i++) { const playing = await ev(`KotOR.GameState.VideoManager.isMoviePlaying() || KotOR.GameState.VideoManager.movieQueue.length > 0`).catch(() => false); if (!playing) break; await ev(`(() => { const v = KotOR.GameState.VideoManager; v.stopMovie(); v.playNextMovie(); return true; })()`).catch(() => {}); await sleep(800); }
   await ev(`KotOR.GameState.LoadModule('201tel'), true`);
-  const inArea = `(KotOR.GameState.Mode === 1 || KotOR.GameState.Mode === 3) && !!KotOR.GameState.module && !!KotOR.GameState.module.area && KotOR.GameState.module.area.name.toLowerCase() === '201tel'`;
+  const inArea = `(KotOR.GameState.Mode === 1 || KotOR.GameState.Mode === 3) && !!KotOR.GameState.module && !!KotOR.GameState.module.area && KotOR.GameState.module.area.name.toLowerCase() === '201tel' && !KotOR.GameState.isLoadingSave`;
   for (let i = 0; i < 160 && !(await ev(`(${inArea}) || false`).catch(() => false)); i++) { await ev(`(() => { const v = KotOR.GameState.VideoManager; if (v.isMoviePlaying() || v.movieQueue.length) { v.stopMovie(); v.playNextMovie(); } return true; })()`).catch(() => {}); await sleep(1500); }
   await waitFor(page, inArea, '201tel', 10000, 1000);
   await sleep(4000);

@@ -13,6 +13,10 @@ import crypto from 'node:crypto';
 
 export const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
+// Chromium switches for test windows: keep the game running at full speed when the window is covered or the screen is
+// locked (Windows otherwise slows a covered window to about one frame a second, and quick key presses are lost).
+export const KEEP_RUNNING_SWITCHES = ['--disable-renderer-backgrounding', '--disable-backgrounding-occluded-windows', '--disable-background-timer-throttling', '--disable-features=CalculateNativeWinOcclusion', '--disable-gpu-vsync', '--disable-frame-rate-limit'];
+
 export function parseArgs(argv = process.argv.slice(2)) {
   const arg = (k) => { const i = argv.indexOf(k); return i >= 0 ? argv[i + 1] : undefined; };
   return { arg, has: (k) => argv.includes(k) };
@@ -104,7 +108,7 @@ export async function launchKotor3({ repo, out, gameDir, log, port = 9223, scree
   const electronExe = path.join(repo, 'node_modules', 'electron', 'dist', process.platform === 'win32' ? 'electron.exe' : 'electron');
   note(`starting Electron (profile ${profileDir})`);
   const mainPort = port + 10;
-  const child = spawn(electronExe, [`--inspect=${mainPort}`, `--remote-debugging-port=${port}`, `--user-data-dir=${profileDir}`, ...extraArgs, 'main.js'], { cwd: repo, stdio: ['ignore', 'pipe', 'pipe'] });
+  const child = spawn(electronExe, [`--inspect=${mainPort}`, `--remote-debugging-port=${port}`, `--user-data-dir=${profileDir}`, ...KEEP_RUNNING_SWITCHES, ...extraArgs, 'main.js'], { cwd: repo, stdio: ['ignore', 'pipe', 'pipe'] });
   child.stdout.on('data', (d) => consoleLines.push(`[main] ${d.toString().trim()}`));
   child.stderr.on('data', (d) => consoleLines.push(`[main:err] ${d.toString().trim()}`));
 
@@ -189,7 +193,9 @@ export async function launchKotor3({ repo, out, gameDir, log, port = 9223, scree
 export const clickGui = (expr) => `(() => { const c = ${expr}; if (!c) throw new Error('no control: ${expr.replace(/'/g, '')}'); c.processEventListener('click', [{ stopPropagation(){}, preventDefault(){} }]); return true; })()`;
 
 /** Area-loaded check for a given area resref (in game or in a conversation). */
-export const inAreaExpr = (area) => `(KotOR.GameState.Mode === 1 || KotOR.GameState.Mode === 3) && !!KotOR.GameState.module && !!KotOR.GameState.module.area && KotOR.GameState.module.area.name.toLowerCase() === ${JSON.stringify(area.toLowerCase())} && !KotOR.GameState.module.loading`;
+// Also waits out a save being loaded: the engine sets isLoadingSave as a load starts and clears it once the reloaded
+// area is ready (before that, the old area can still look ready).
+export const inAreaExpr = (area) => `(KotOR.GameState.Mode === 1 || KotOR.GameState.Mode === 3) && !!KotOR.GameState.module && !!KotOR.GameState.module.area && KotOR.GameState.module.area.name.toLowerCase() === ${JSON.stringify(area.toLowerCase())} && !KotOR.GameState.module.loading && !KotOR.GameState.isLoadingSave`;
 
 /**
  * Helpers for the KOTOR II save and load menus (KOTOR III Phase 2, finding 23), shared by the desktop and

@@ -113,10 +113,37 @@
   "switchOff": {
     "201tel": {
       "triggers": [
-        "201Enter"
+        "201Enter",
+        "tr_shuttle_1",
+        "tr_shuttle_2",
+        "tr_moza_help",
+        "tr_droidint",
+        "tr_samhan",
+        "tr_czerkaintercept",
+        "to_ebonhawk",
+        "to_ebonhawk_custom"
       ],
       "conversations": [
-        "201bay"
+        "201bay",
+        "201ithd",
+        "201drdi",
+        "201ithd2",
+        "201tsfi",
+        "202drdp",
+        "durosdock",
+        "czerdock",
+        "201shu",
+        "200_info_term",
+        "201trma1",
+        "201trma2",
+        "201trma3",
+        "201trma1a",
+        "201trma2a",
+        "201trma3a",
+        "201trma1e"
+      ],
+      "doors": [
+        "Urban"
       ]
     },
     "301nar": {
@@ -136,7 +163,12 @@
         "RedEclipseAttack",
         "tr_spawn_mira",
         "tr_prevent306",
-        "tr_swoop_return"
+        "tr_swoop_return",
+        "TO_302NAR",
+        "TO_303NAR",
+        "TO_306",
+        "to_ebonhawk",
+        "to_ebonhawk_custom"
       ],
       "creatures": [
         "ExchangeThug1",
@@ -145,10 +177,44 @@
         "ExchangeThug4",
         "ThugBoss",
         "GranThug"
+      ],
+      "conversations": [
+        "tt32",
+        "tienn",
+        "rutum",
+        "ratrin",
+        "oondar",
+        "nscommal",
+        "refugee",
+        "it31",
+        "kodin",
+        "refugee2",
+        "modo",
+        "lupo",
+        "borna",
+        "guron",
+        "nodobo",
+        "geeda",
+        "quello",
+        "refugee3",
+        "vossk",
+        "c9t9",
+        "301twin"
       ]
     }
   },
   "onEnter": {
     "301nar": "k3_nar_enter"
+  },
+  "switchOffText": {
+    "talk": [
+      "Keep walking, stranger. We have no business together.",
+      "Not now. I have troubles enough of my own.",
+      "Whatever you are after, I do not have it.",
+      "Leave me be, stranger. I am busy.",
+      "Find someone else to bother. My patience ran out hours ago."
+    ],
+    "object": "It stays dark. Whatever it does, it is not your concern today.",
+    "closedExit": "Sealed. Whatever lies past it can wait until the job is done."
   }
 }

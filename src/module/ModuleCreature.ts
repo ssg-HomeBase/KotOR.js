@@ -2173,6 +2173,8 @@ export class ModuleCreature extends ModuleObject {
       GameState.getCurrentPlayer().actionUseObject(this);
     }else if(!this.isDead()){
       this.clearAllActions();
+      // KOTOR III Phase 2 (finding 30): remembered so a switched-off conversation can answer with a short line.
+      GameState.CutsceneManager.notePlayerClick(this);
       if(this.getConversation() && this.getConversation().resref){
         GameState.getCurrentPlayer().actionDialogObject(this, this.getConversation().resref, false, undefined, undefined, true);
       }

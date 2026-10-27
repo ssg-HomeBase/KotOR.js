@@ -20,7 +20,7 @@ import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import http from 'node:http';
-import { parseArgs, makeLog, sleep, cdp, evaluate, waitFor, listTree, diffLists, clickGui, inAreaExpr } from './e2e-lib.mjs';
+import { KEEP_RUNNING_SWITCHES, parseArgs, makeLog, sleep, cdp, evaluate, waitFor, listTree, diffLists, clickGui, inAreaExpr } from './e2e-lib.mjs';
 
 const { arg } = parseArgs();
 const SITE = arg('--site'), GAME_DIR = arg('--game-dir'), OUT = arg('--out');
@@ -51,7 +51,7 @@ app.whenReady().then(() => { const w = new BrowserWindow({ width: 1280, height: 
   w.webContents.setBackgroundThrottling(false); w.loadURL('http://127.0.0.1:${PORT}/game/index.html?key=kotor3'); });`);
 const electronExe = path.join(REPO, 'node_modules', 'electron', 'dist', process.platform === 'win32' ? 'electron.exe' : 'electron');
 const folderBefore = listTree(GAME_DIR);
-const child = spawn(electronExe, [`--remote-debugging-port=${CDP_PORT}`, `--user-data-dir=${path.join(OUT, 'chromium-profile')}`, mainJs], { stdio: 'ignore' });
+const child = spawn(electronExe, [`--remote-debugging-port=${CDP_PORT}`, `--user-data-dir=${path.join(OUT, 'chromium-profile')}`, ...KEEP_RUNNING_SWITCHES, mainJs], { stdio: 'ignore' });
 let page;
 let frozen = null;
 try {

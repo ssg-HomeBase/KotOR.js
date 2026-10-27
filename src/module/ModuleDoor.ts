@@ -2,6 +2,7 @@ import { ModuleObject } from "@/module/ModuleObject";
 import type { ModuleRoom } from "@/module/ModuleRoom";
 import { AudioEmitter } from "@/audio/AudioEmitter";
 import { GameState } from "@/GameState";
+import { ModSwitchOff } from "@/managers/ModSwitchOff";
 import { SSFType } from "@/enums/resource/SSFType";
 import { NWScriptInstance } from "@/nwscript/NWScriptInstance";
 import { CExoLocString } from "@/resource/CExoLocString";
@@ -73,6 +74,8 @@ export class ModuleDoor extends ModuleObject {
   keyRequired: boolean;
   lockable: boolean;
   locked: boolean;
+  /** KOTOR III Phase 2 (finding 30): an exit the active mod switched off (shut, leads nowhere). */
+  closedByMod: boolean = false;
   openLockDC: number;
   paletteID: number;
   ref: number;
@@ -402,6 +405,9 @@ export class ModuleDoor extends ModuleObject {
 
     // If the door is still locked, run the on fail to open script
     if(this.isLocked()){
+      if(this.closedByMod && ModSwitchOff.text.closedExit){
+        GameState.MenuManager.InGameBark.barkFromString(ModSwitchOff.text.closedExit);
+      }
       const onFailToOpen = this.scripts[ModuleObjectScript.DoorOnFailToOpen];
       if(onFailToOpen){
         onFailToOpen.run(this);

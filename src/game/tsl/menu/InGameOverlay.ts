@@ -381,6 +381,9 @@ export class InGameOverlay extends K1_InGameOverlay {
       const arrowGeometry = new THREE.PlaneGeometry( 1, 1, 1 );
       const arrowMaterial = new THREE.MeshBasicMaterial( { color: 0xffffff, transparent: false, blending: THREE.AdditiveBlending } );
       arrowMaterial.map = preloadTexturesMap.get('friendlyarrow');
+      // KOTOR III Phase 2 (finding 33): the KOTOR I overlay keeps this material to recolour the arrow over the selected
+      // character (friend or foe); the KOTOR II overlay skips that setup, so the update threw whenever it changed.
+      this.namePlateArrowMaterial = arrowMaterial;
       this.namePlateArrow = new THREE.Mesh( arrowGeometry, arrowMaterial );
       this.namePlateArrow.scale.x = 32;
       this.namePlateArrow.scale.y = 32;

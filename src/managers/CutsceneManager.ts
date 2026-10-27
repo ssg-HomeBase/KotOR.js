@@ -46,6 +46,33 @@ export class CutsceneManager {
 
   static lastSpokenString: string = '';
 
+  /** The object the player last clicked to talk to, and when (finding 30). */
+  static playerClicked: ModuleObject;
+  static playerClickedAt: number = 0;
+  static notePlayerClick(object: ModuleObject){
+    this.playerClicked = object;
+    this.playerClickedAt = Date.now();
+  }
+
+  /**
+   * KOTOR III Phase 2 (finding 31): things a line's own script asked for that must wait until the line has been read
+   * (an area change such as Senn's trip to Nar Shaddaa). They run when the line ends, is skipped or the talk stops.
+   */
+  static afterLine: (() => void)[] = [];
+  static runAfterLine(action: () => void){
+    if(this.active && this.currentEntry && !this.currentEntry.repliesShown){
+      this.afterLine.push(action);
+    }else{
+      action();
+    }
+  }
+  private static flushAfterLine(){
+    const actions = this.afterLine.splice(0);
+    for(const action of actions){
+      try{ action(); }catch(e){ console.error(e); }
+    }
+  }
+
   static listener: ModuleObject;
   static owner: ModuleObject;
 
@@ -89,6 +116,23 @@ export class CutsceneManager {
     // KOTOR III Phase 2: a fan mod can switch off named base-game conversations in an area.
     const requested = (dialog instanceof DLGObject ? dialog : owner?.getConversation?.())?.resref;
     if(requested && ModSwitchOff.IsSwitchedOff('conversations', requested)){
+      // KOTOR III Phase 2 (finding 30): the player clicked a base-game character whose conversation is switched off;
+      // show a short line from the mod instead of nothing. Scripted starts stay silent.
+      const clicked = this.playerClicked && Date.now() - this.playerClickedAt < 60000 ? this.playerClicked : undefined;
+      const speaker = owner === clicked ? owner : (listener === clicked ? listener : undefined);
+      if(speaker && BitWise.InstanceOfObject(speaker, ModuleObjectType.ModulePlaceable)){
+        if(ModSwitchOff.text.object){
+          GameState.MenuManager.InGameBark.barkFromString(ModSwitchOff.text.object);
+        }
+      }else if(speaker && BitWise.InstanceOfObject(speaker, ModuleObjectType.ModuleCreature)){
+        const line = ModSwitchOff.TalkLine(`${speaker.getTag?.() || ''}:${requested}`);
+        if(line){
+          // Names can carry designer notes in braces ("Ithorian{Door}"), which the game never shows.
+          const name = String(speaker.getName?.() || '').replace(/\{[^}]*\}/g, '').trim();
+          GameState.MenuManager.InGameBark.barkFromString(name ? `${name}: ${line}` : line);
+        }
+      }
+      this.playerClicked = undefined;
       return;
     }
     this.active = true;
@@ -354,9 +398,14 @@ export class CutsceneManager {
     this.state = ConversationState.WAITING_FOR_PC_CHOICE;
     this.currentEntry = undefined;
     this.isListening = false;
+    // KOTOR III Phase 2 (finding 31): the line asked to leave the area; now that it has been read, end the talk and go.
+    if (this.afterLine.length) {
+      this.endConversation();
+      return;
+    }
     if (GameState.Mode != EngineMode.DIALOG)
       return;
-    
+
     //Get First Reply
     const reply = this.dialog.getReplyByIndex(entry.replies[0]?.index);
     if(!reply){
@@ -475,6 +524,7 @@ export class CutsceneManager {
     if(wasBark){
       GameState.RestoreEnginePlayMode();
     }
+    this.flushAfterLine();
   }
 
   /**

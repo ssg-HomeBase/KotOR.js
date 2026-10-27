@@ -10,8 +10,8 @@ import { JournalCategory } from "@/engine/JournalCategory";
 import { JournalCategoryEntry } from "@/engine/JournalCategoryEntry";
 import { CExoLocString } from "@/resource/CExoLocString";
 import { CExoLocSubString } from "@/resource/CExoLocSubString";
-import { ModSwitchOff, IModSwitchOff } from "@/managers/ModSwitchOff";
-export type { IModSwitchOff } from "@/managers/ModSwitchOff";
+import { ModSwitchOff, IModSwitchOff, IModSwitchOffText } from "@/managers/ModSwitchOff";
+export type { IModSwitchOff, IModSwitchOffText } from "@/managers/ModSwitchOff";
 
 /** One creature the mod adds to an existing area (same fields as a GIT "Creature List" entry). */
 export interface IModCreaturePlacement {
@@ -61,6 +61,8 @@ export interface IModManifest {
   creatures?: IModCreaturePlacement[];
   /** Per-area switch-off of base-game plot, keyed by area resref. */
   switchOff?: Record<string, IModSwitchOff>;
+  /** What the player is told instead of switched-off content (lines for characters, a line for closed exits). */
+  switchOffText?: IModSwitchOffText;
   /** Campaign data file (globals and quests), e.g. "campaign.json". */
   campaign?: string;
   /** The mod's own script to run when an area is entered (after the area's own), keyed by area resref. */
@@ -100,6 +102,7 @@ export class ModManager {
     ModManager.manifest = manifest;
     ModManager.loadedFiles = [];
     ModSwitchOff.SetRules(manifest.switchOff);
+    ModSwitchOff.SetText(manifest.switchOffText);
     for (const file of manifest.files) {
       const match = /^([a-z0-9_]{1,16})\.([a-z0-9]{3})$/i.exec(file);
       if (!match) throw new Error(`ModManager: bad file name in manifest: ${file}`);

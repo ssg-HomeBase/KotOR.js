@@ -14,6 +14,24 @@ export class ResolutionManager {
   public static vpScaleFactor: number = 1;
   public static hpScaleFactor: number = 1;
 
+  /**
+   * KOTOR III Phase 2 (finding 32): KOTOR II's menus are laid out for an 800x600 screen and were drawn at that size in
+   * any window: small on a big screen, cut off in a short laptop window. The game now works in a virtual screen about
+   * 960x720 (the window size divided by this scale) and the canvas draws it at the window's full size and sharpness.
+   */
+  public static uiScale: number = 1;
+  static readonly UI_BASE_WIDTH = 960;
+  static readonly UI_BASE_HEIGHT = 720;
+  static computeUIScale(): number {
+    if(this.viewportHost || !this.screenResolution.isDynamicRes) return 1;
+    const s = Math.min(window.innerWidth / this.UI_BASE_WIDTH, window.innerHeight / this.UI_BASE_HEIGHT);
+    return Number.isFinite(s) && s > 0 ? Math.min(3, Math.max(0.5, s)) : 1;
+  }
+  /** Device pixels per virtual pixel, capped at 2 so big high-DPI screens stay smooth. */
+  static getRenderPixelRatio(): number {
+    return Math.min(2, Math.max(0.5, this.uiScale * (window.devicePixelRatio || 1)));
+  }
+
   public static windowResolution: {width: number; height: number;} = {
     width: 0,
     height: 0
@@ -121,28 +139,28 @@ export class ResolutionManager {
     if(this.viewportHost){
       return this.getHostWidth();
     }
-    return this.screenResolution.isDynamicRes ? window.innerWidth : this.screenResolution.width;
+    return this.screenResolution.isDynamicRes ? window.innerWidth / this.uiScale : this.screenResolution.width;
   }
 
   static getViewportHeight(): number {
     if(this.viewportHost){
       return this.getHostHeight();
     }
-    return this.screenResolution.isDynamicRes ? window.innerHeight : this.screenResolution.height;
+    return this.screenResolution.isDynamicRes ? window.innerHeight / this.uiScale : this.screenResolution.height;
   }
 
   static getViewportWidthScaled(): number {
     if(this.viewportHost){
       return this.getHostWidth();
     }
-    return this.screenResolution.isDynamicRes ? window.innerWidth : this.screenResolution.width * this.vpScaleFactor;
+    return this.screenResolution.isDynamicRes ? window.innerWidth / this.uiScale : this.screenResolution.width * this.vpScaleFactor;
   }
 
   static getViewportHeightScaled(): number {
     if(this.viewportHost){
       return this.getHostHeight();
     }
-    return this.screenResolution.isDynamicRes ? window.innerHeight : this.screenResolution.height * this.hpScaleFactor;
+    return this.screenResolution.isDynamicRes ? window.innerHeight / this.uiScale : this.screenResolution.height * this.hpScaleFactor;
   }
 
   static getWindowWidth(): number {
@@ -154,6 +172,7 @@ export class ResolutionManager {
   }
 
   static recalculate(): void {
+    this.uiScale = this.computeUIScale();
     const hostW = this.getHostWidth();
     const hostH = this.getHostHeight();
     this.windowResolution.width = hostW;

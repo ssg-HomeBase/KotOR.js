@@ -1818,6 +1818,15 @@ export class ModuleArea extends ModuleObject {
       const door = this.doors[i];
       try{
         door.load();
+        // KOTOR III Phase 2 (finding 30): an exit a mod switched off stays shut and leads nowhere.
+        if(ModSwitchOff.IsSwitchedOff('doors', [door.getTag(), door.getTemplateResRef()], this.name)){
+          door.closedByMod = true;
+          door.linkedToModule = '';
+          door.setLocked(true);
+          door.keyRequired = true;
+          door.plot = true;
+          door.scripts[ModuleObjectScript.DoorOnFailToOpen] = undefined;
+        }
         // door.position.x = door.getX();
         // door.position.y = door.getY();
         // door.position.z = door.getZ();

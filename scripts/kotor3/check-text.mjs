@@ -3,7 +3,8 @@
  * check-text.mjs: every line of new text in the KOTOR III mod must be original.
  *
  * Collects all text the mod adds (dialogue lines and replies in mods/kotor3/src/*.dialogue.json, quest
- * names and journal texts in mods/kotor3/campaign.json, character names in *.creature.json) and compares
+ * names and journal texts in mods/kotor3/campaign.json, character names in *.creature.json, and the lines
+ * manifest.json shows instead of switched-off base-game content) and compares
  * it with every string in the player's own dialog.tlk, which is read into memory only (never copied,
  * written or printed). Fails on any exact match of a line, or any run of 6 or more words in common.
  *
@@ -33,6 +34,11 @@ for (const f of fs.readdirSync(path.join(MOD, 'src'))) {
     lines.push({ where: `${f} name`, text: `${c.firstName || ''} ${c.lastName || ''}`.trim() });
   }
 }
+// Lines shown instead of switched-off base-game content (manifest switchOffText, finding 30).
+const manifest = JSON.parse(fs.readFileSync(path.join(MOD, 'manifest.json'), 'utf8'));
+(manifest.switchOffText?.talk || []).forEach((t, i) => lines.push({ where: `manifest.json switchOffText talk ${i + 1}`, text: t }));
+if (manifest.switchOffText?.object) lines.push({ where: 'manifest.json switchOffText object', text: manifest.switchOffText.object });
+if (manifest.switchOffText?.closedExit) lines.push({ where: 'manifest.json switchOffText closedExit', text: manifest.switchOffText.closedExit });
 const campaign = JSON.parse(fs.readFileSync(path.join(MOD, 'campaign.json'), 'utf8'));
 for (const q of campaign.quests || []) {
   lines.push({ where: `campaign.json ${q.tag} name`, text: q.name });
