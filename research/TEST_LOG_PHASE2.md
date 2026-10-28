@@ -393,3 +393,17 @@ Fix check, on the fixed code (production build from `prepare-deploy.mjs`: scan P
 Not changed (noted): KOTOR II's left-aligned description text starts on its box's border line, so a first letter can look clipped; the Nar Shaddaa area load logs a missing fan walkmesh and stores without a name (both before these changes; the stores belong to switched-off conversations).
 
 Deployed as preview `dpl_ABSYb9nRnwgKSr7EkaEfGJspPac9` (READY, target preview, 302 to Vercel login, 107 files, 0 blocked, 0 production deployments), built from `7c38e3f9`.
+
+## The ending sets course for Dantooine (Cam's choice, 2026-10-28)
+
+Round 10's grader noted that the episode ended with the jump past the charts while the story bible's Act I still visits Dantooine first. Cam chose to change the ending, not the plan. `k3_end` keeps its nodes, links and script; Rhea now finds the coordinates stop at the last beacon, the rest of the route is still sealed, and Seren sets the course for Dantooine, where Jedi are rebuilding the old enclave (story bible, Planets and Act I). The last stage of The Last Signal says the same. Only `k3_end.dlg` changed among the built files.
+
+| Check | Result |
+|---|---|
+| `run.mjs build-mod`, `verify-mod` | 36 files written; PASS (18 game-format files, 18 scripts) |
+| `check-dlg.mjs` | PASS (10 dialogues, every node reachable) |
+| `check-text.mjs` (the player's dialog.tlk, in memory) | PASS: 154 mod lines, 0 exact matches, 0 runs of 6 words |
+| First run of the six tests (web_episode_run9) | FAIL 18 of 19: w18 caught an uncaught error during the save load (selectable objects looked up with the area gone; finding 33's guard covered only the area tick). The guard moved to the top of the in-game update (`src/GameState.ts:1501`); all six were run again |
+| All six tests on the rebuilt production build | browser playthrough web_episode_run10 PASS 19 of 19, read test web_read_fail_run9 PASS 4 of 4, browser save web_save_menu_run10 PASS 9 of 9, desktop episode ep_run13 PASS 12 of 12, save menu save_menu_run12 PASS 11 of 11, M1 m1_run15 PASS 8 of 8 |
+
+Deployed as preview `dpl_HcQy7RK1Wh8rvEHFpmTKWbx8pxE4` (READY, target preview, 302 to Vercel login, 107 files, 0 blocked, 0 production deployments), built from `47743470`.
