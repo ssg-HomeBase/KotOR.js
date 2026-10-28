@@ -259,6 +259,9 @@ export class PartyManager {
       }
     }
 
+    // KOTOR III Phase 2 (finding 26): a load replaces the journal. The quests from before the load were kept, so each
+    // quest was listed twice and later updates changed only one copy (the other stayed at its old stage).
+    GameState.JournalManager.ClearEntries();
     if(gff.RootNode.hasField('JNL_Entries')){
       const entries = gff.RootNode.getFieldByLabel('JNL_Entries').getChildStructs();
       for(let i = 0; i < entries.length; i++){
@@ -772,6 +775,11 @@ export class PartyManager {
 
     creature = creature as ModuleCreature;
     creature.isPM = true;
+    // KOTOR III Phase 2: remember the party slot, or saves write no member for this creature.
+    creature.npcId = slot;
+    if(!PartyManager.CurrentMembers.some((m) => m.memberID == slot)){
+      PartyManager.CurrentMembers.push({ isLeader: false, memberID: slot });
+    }
     creature.clearAllActions();
     PartyManager.NPCS[slot].available = true;
     //PartyManager.NPCS[nID].canSelect = true;
@@ -927,6 +935,12 @@ export class PartyManager {
    * @returns number
    */
   static GetCreatureStartingPartyIndex(creature: ModuleCreature){
+
+    // KOTOR III Phase 2: a creature without a portrait (or one matching nobody) joins at the end;
+    // an empty portrait used to match an empty saved slot.
+    if(!creature.getPortraitResRef()){
+      return PartyManager.party.length;
+    }
 
     if(PartyManager.PortraitOrder[0]?.toLowerCase() == creature.getPortraitResRef().toLowerCase()){
       return 0

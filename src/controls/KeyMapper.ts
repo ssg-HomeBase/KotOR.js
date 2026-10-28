@@ -448,6 +448,21 @@ export class KeyMapper {
       }
     }
 
+    // KOTOR III Phase 2: number keys 1 to 9 pick dialogue replies, as in the original games.
+    // The defaults below were commented out upstream, so the keys did nothing in conversations.
+    const dialogActions = [
+      KeyMapAction.Dialog1, KeyMapAction.Dialog2, KeyMapAction.Dialog3,
+      KeyMapAction.Dialog4, KeyMapAction.Dialog5, KeyMapAction.Dialog6,
+      KeyMapAction.Dialog7, KeyMapAction.Dialog8, KeyMapAction.Dialog9,
+    ];
+    for(let i = 0; i < dialogActions.length; i++){
+      const map = KeyMapper.Actions[dialogActions[i]];
+      const digit: KeyInput = (keyboard.action as any)[`Digit${i + 1}`];
+      if(!map || !digit) continue;
+      map.keyboardInput = digit;
+      if(!KeyMapper.ACTIONS_DIALOG.includes(map)) KeyMapper.ACTIONS_DIALOG.push(map);
+    }
+
     //Movement
     /*KeyMapper.Actions[KeyMapAction.ActionUp].keyboardInput = keyboard.action.KeyW;
     KeyMapper.Actions[KeyMapAction.ActionDown].keyboardInput = keyboard.action.KeyS;

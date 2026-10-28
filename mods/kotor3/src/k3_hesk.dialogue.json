@@ -1,0 +1,59 @@
+{
+  "resref": "k3_hesk",
+  "comment": "KOTOR III (fan) Nar Shaddaa landing pad. Hesk Varo, a Twi'lek ship broker, sells the crew the Far Lantern. Original writing for this fan project.",
+  "start": ["E0", "E1", "E2"],
+  "entries": [
+    {
+      "id": "E0",
+      "text": "There you are! Fuel cells full, hull patched, and your Mandalorian has already argued with my mechanic twice. The Far Lantern is waiting on you.",
+      "active": "k3_c_ready",
+      "replies": ["R0"]
+    },
+    {
+      "id": "E1",
+      "text": "Paid for and waiting, friend, but my mechanic is still elbow-deep in her drive. Come back with your navigator once your business on the pad is settled.",
+      "active": "k3_c_shippaid",
+      "replies": []
+    },
+    {
+      "id": "E2",
+      "text": "Welcome, welcome! Hesk Varo, the finest hulls on this landing pad and the friendliest prices on any of them. What are we flying today?",
+      "replies": ["R1"]
+    },
+    {
+      "id": "E3",
+      "text": "Coordinates loaded and locked. She is all yours. Try to return her with most of her panels attached, or at least come back with a decent story.",
+      "script": "k3_ship_done",
+      "replies": []
+    },
+    {
+      "id": "E4",
+      "text": "Then you want the Far Lantern. An old long-range courier, plain as a cargo crate, but her drive will outlive both of us. Best range on the pad.",
+      "replies": ["R2", "R3"]
+    },
+    {
+      "id": "E5",
+      "text": "Your friend's shuttle in trade, plus a share of whatever you bring home. Done! Oh, and a woman in grey was here asking about your courier. I told her nothing, naturally.",
+      "script": "k3_q_ship20",
+      "replies": ["R5"]
+    },
+    {
+      "id": "E6",
+      "text": "Wrong? Nothing a coat of paint will not hide. Her last owner flew her far and hard, and she came back with stories nobody wanted to buy. The drive is flawless.",
+      "replies": ["R4"]
+    },
+    {
+      "id": "E7",
+      "text": "Last I saw, near the far stairs. Never smiled once. My mechanic needs a little time with the Lantern anyway. Come back when you are ready to fly.",
+      "replies": []
+    }
+  ],
+  "replies": [
+    { "id": "R0", "text": "Load the coordinates. We leave now.", "next": "E3" },
+    { "id": "R1", "text": "Something that can jump past the star charts and keep going.", "next": "E4" },
+    { "id": "R2", "text": "She sounds right. What do you want for her?", "next": "E5" },
+    { "id": "R3", "text": "What is wrong with her?", "next": "E6" },
+    { "id": "R4", "text": "Stories I can live with. Name your price.", "next": "E5" },
+    { "id": "R5", "text": "A woman in grey? Where did she go?", "next": "E7" }
+  ]
+}

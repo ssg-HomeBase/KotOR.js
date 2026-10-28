@@ -898,6 +898,13 @@ export class GameState implements EngineContext {
     let width = GameState.ResolutionManager.getViewportWidth();
     let height = GameState.ResolutionManager.getViewportHeight();
 
+    // KOTOR III Phase 2 (finding 32): width and height are the virtual screen; draw it at the window's own pixels.
+    const pixelRatio = GameState.forgePreviewHost ? 1 : GameState.ResolutionManager.getRenderPixelRatio();
+    if(GameState.renderer.getPixelRatio() != pixelRatio){
+      GameState.renderer.setPixelRatio(pixelRatio);
+    }
+    (GameState.composer as any).setPixelRatio?.(pixelRatio);
+
     GameState.composer.setSize(width * GameState.rendererUpscaleFactor, height * GameState.rendererUpscaleFactor);
 
     GameState.FadeOverlayManager.plane.scale.set(width, height, 1);
@@ -914,8 +921,12 @@ export class GameState implements EngineContext {
     GameState.camera.aspect = width / height;
     GameState.camera.updateProjectionMatrix();
 
-    GameState.renderer.setSize(width, height);  
-    
+    GameState.renderer.setSize(width, height);
+    if(!GameState.forgePreviewHost && GameState.ResolutionManager.uiScale != 1){
+      GameState.canvas.style.width = `${width * GameState.ResolutionManager.uiScale}px`;
+      GameState.canvas.style.height = `${height * GameState.ResolutionManager.uiScale}px`;
+    }
+
     GameState.camera_dialog.aspect = GameState.camera.aspect;
     GameState.camera_dialog.updateProjectionMatrix();
 
@@ -1487,6 +1498,12 @@ export class GameState implements EngineContext {
   }
 
   static UpdateIngame(delta: number = 0){
+    // KOTOR III Phase 2 (finding 33): while a save is loading the old area is already gone for a few frames, and
+    // everything below (selectable objects, the area's tick) needs it.
+    if(!GameState.module?.area){
+      return;
+    }
+
     //Get Selectable Objects In Range
     GameState.ModuleObjectManager.TickSelectableObjects(delta);
 

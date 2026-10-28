@@ -58,6 +58,7 @@ import { IVISRoom } from "@/interface/module/IVISRoom";
 import { BackgroundMusicMode } from "@/enums/audio/BackgroundMusicMode";
 import { ModuleObjectScript } from "@/enums/module/ModuleObjectScript";
 import { ModManager } from "@/managers/ModManager";
+import { ModSwitchOff } from "@/managers/ModSwitchOff";
 
 type AreaScriptKeys = 'OnEnter'|'OnExit'|'OnHeartbeat'|'OnUserDefined';
 
@@ -94,6 +95,16 @@ export class ModuleArea extends ModuleObject {
   static ModuleStore: typeof ModuleStore = ModuleStore;
   static ModuleTrigger: typeof ModuleTrigger = ModuleTrigger;
   static ModuleWaypoint: typeof ModuleWaypoint = ModuleWaypoint;
+
+  /** KOTOR III Phase 2: the Tag in a mod creature's template (lower case), or its resref when the template has none. */
+  static modPlacementTag(templateResRef: string): string {
+    try{
+      const buffer = ResourceLoader.loadCachedResource(ResourceTypes['utc'], templateResRef);
+      const tag = buffer ? String(new GFFObject(buffer).RootNode.getFieldByLabel('Tag')?.getValue() || '') : '';
+      if(tag) return tag.toLowerCase();
+    }catch(e){ /* no template: fall back to the resref */ }
+    return String(templateResRef || '').toLowerCase();
+  }
 
   module: Module;
   are: GFFObject;
@@ -1053,6 +1064,23 @@ export class ModuleArea extends ModuleObject {
     }
 
     //BEGIN GIT LOAD
+    // KOTOR III Phase 2: the active fan mod can switch off base-game content per area (ModManager.IsSwitchedOff).
+    ModSwitchOff.currentArea = String(this.name || '').toLowerCase();
+    // Names to match: the GIT entry's Tag and TemplateResRef, and the Tag inside its template
+    // (base-game GIT entries usually carry only the template; the tag lives in the UTT or UTC).
+    const gitNames = (strt: GFFStruct, kind: 'triggers' | 'creatures', templateType: number): string[] => {
+      const names = [
+        String(strt.getFieldByLabel('Tag')?.getValue() || ''),
+        String(strt.getFieldByLabel('TemplateResRef')?.getValue() || ''),
+      ];
+      if(ModSwitchOff.HasRules(this.name, kind) && names[1]){
+        try{
+          const buffer = ResourceLoader.loadCachedResource(templateType, names[1]);
+          if(buffer) names.push(String(new GFFObject(buffer).RootNode.getFieldByLabel('Tag')?.getValue() || ''));
+        }catch(e){ /* no template: match on the GIT names only */ }
+      }
+      return names;
+    };
 
     const areaMap = this.git.getFieldByLabel('AreaMap');
     const areaProps = this.git.getFieldByLabel('AreaProperties');
@@ -1105,15 +1133,22 @@ export class ModuleArea extends ModuleObject {
     if(creatures){
       for(let i = 0; i < creatures.childStructs.length; i++){
         const strt = creatures.childStructs[i];
+        if(ModSwitchOff.IsSwitchedOff('creatures', gitNames(strt, 'creatures', ResourceTypes['utc']), this.name)) continue;
         this.attachObject( new ModuleCreature(GFFObject.FromStruct(strt)) );
       }
     }
 
     //Creatures added by the active fan mod (KOTOR III). Built like a GIT "Creature List" entry.
     for(const placement of ModManager.GetCreaturePlacements(this.name)){
+      // KOTOR III Phase 2: not placed again once a mod global says so (e.g. the companion joined the party).
+      if(placement.skipIfGlobal && GameState.GlobalVariableManager.GetGlobalBoolean(placement.skipIfGlobal)) continue;
       // A save made with the mod already lists the creature in its GIT; do not add a second copy.
+      // KOTOR III Phase 2 (finding 24): a saved creature carries its Tag but no TemplateResRef (the loader reads a
+      // TemplateResRef as "merge the template", so saves leave it out), so match on the template's Tag as well.
+      const placementTag = ModuleArea.modPlacementTag(placement.templateResRef);
       const alreadyPlaced = (creatures?.childStructs || []).some( (s) =>
-        String(s.getFieldByLabel('TemplateResRef')?.getValue() || '').toLowerCase() == placement.templateResRef.toLowerCase()
+        String(s.getFieldByLabel('TemplateResRef')?.getValue() || '').toLowerCase() == placement.templateResRef.toLowerCase() ||
+        String(s.getFieldByLabel('Tag')?.getValue() || '').toLowerCase() == placementTag
       );
       if(alreadyPlaced) continue;
       const instance = new GFFObject();
@@ -1132,6 +1167,7 @@ export class ModuleArea extends ModuleObject {
     if(triggers){
       for(let i = 0; i < triggers.childStructs.length; i++){
         const strt = triggers.childStructs[i];
+        if(ModSwitchOff.IsSwitchedOff('triggers', gitNames(strt, 'triggers', ResourceTypes['utt']), this.name)) continue;
         this.attachObject( new ModuleTrigger(GFFObject.FromStruct(strt)) );
       }
     }
@@ -1782,6 +1818,15 @@ export class ModuleArea extends ModuleObject {
       const door = this.doors[i];
       try{
         door.load();
+        // KOTOR III Phase 2 (finding 30): an exit a mod switched off stays shut and leads nowhere.
+        if(ModSwitchOff.IsSwitchedOff('doors', [door.getTag(), door.getTemplateResRef()], this.name)){
+          door.closedByMod = true;
+          door.linkedToModule = '';
+          door.setLocked(true);
+          door.keyRequired = true;
+          door.plot = true;
+          door.scripts[ModuleObjectScript.DoorOnFailToOpen] = undefined;
+        }
         // door.position.x = door.getX();
         // door.position.y = door.getY();
         // door.position.z = door.getZ();
@@ -2103,9 +2148,23 @@ export class ModuleArea extends ModuleObject {
 
   runOnEnterScripts(){
     const nwscript = this.scripts[ModuleObjectScript.AreaOnEnter];
-    if(!nwscript){ return; }
-    nwscript.enteringObject = GameState.PartyManager.party[0];
-    nwscript.run(this, 0);
+    if(nwscript){
+      nwscript.enteringObject = GameState.PartyManager.party[0];
+      nwscript.run(this, 0);
+    }
+    // KOTOR III Phase 2: the active fan mod's own entry script for this area (manifest "onEnter"),
+    // run after the area's own, so a mod can start its scenes without editing a game file.
+    const modScriptName = ModManager.GetAreaEnterScript(this.name);
+    if(modScriptName){
+      const modScript = NWScript.Load(modScriptName);
+      if(modScript){
+        modScript.enteringObject = GameState.PartyManager.party[0];
+        modScript.run(this, 0);
+        console.log('ModManager: ran area enter script', modScriptName, 'in', this.name);
+      }else{
+        console.warn('ModManager: area enter script not found', modScriptName);
+      }
+    }
   }
 
   async runStartScripts(){

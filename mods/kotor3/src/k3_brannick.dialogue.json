@@ -1,0 +1,46 @@
+{
+  "resref": "k3_brannick",
+  "comment": "KOTOR III (fan) Citadel Station docks. Brannick, a retired spacer, points the crew toward Nar Shaddaa. Original writing for this fan project.",
+  "start": ["E0", "E1"],
+  "entries": [
+    {
+      "id": "E0",
+      "text": "You're the one walking with the Vaux girl. Heard her shuttle got topped up this morning. Wherever she's taking you, I hope you packed warmer than she did.",
+      "active": "k3_c_svjoin",
+      "replies": ["R0", "R1"]
+    },
+    {
+      "id": "E1",
+      "text": "I'm counting ships, spacer, not making friends. Go and bother somebody who has a schedule.",
+      "replies": []
+    },
+    {
+      "id": "E2",
+      "text": "Past the charts? Nobody on Telos sells routes like that. On Nar Shaddaa they trade them like any other cargo. The Mandalorian clans flew a few of those lanes once, in my day.",
+      "script": "k3_q_nav10",
+      "replies": ["R3"]
+    },
+    {
+      "id": "E3",
+      "text": "Brannick. Thirty years hauling ore and passengers in and out of this system. These days I sit on this crate and watch younger fools leave.",
+      "replies": ["R2"]
+    },
+    {
+      "id": "E4",
+      "text": "Somebody who still remembers the old clan lanes, if you can find one sober. Start at the refugee landing pad. And keep one hand on your credit chip.",
+      "replies": ["R4"]
+    },
+    {
+      "id": "E5",
+      "text": "Don't thank me. Just fly far enough for an old man who never got the chance.",
+      "replies": []
+    }
+  ],
+  "replies": [
+    { "id": "R0", "text": "We need a route that goes beyond the star charts.", "next": "E2" },
+    { "id": "R1", "text": "And who might you be?", "next": "E3" },
+    { "id": "R2", "text": "Thirty years. Then you might know a route past the charts.", "next": "E2" },
+    { "id": "R3", "text": "Who on Nar Shaddaa would sell one?", "next": "E4" },
+    { "id": "R4", "text": "Thank you, Brannick.", "next": "E5" }
+  ]
+}

@@ -8,16 +8,25 @@
  *   1. has a game-file type (.bif .key .rim .erf .tpc .tga .mdl .mdx .wav .mp3 .wmv .bik, or is
  *      dialog.tlk) and is outside mods/kotor3/, or
  *   2. is byte-identical to a file in the game folder, or to a resource stored inside one of the
- *      game's archives (BIF, RIM, ERF/MOD), compared by SHA-256.
+ *      game's archives (BIF, RIM, ERF/MOD), compared by SHA-256, or
+ *   3. (--dir scans only) is one of the upstream KotOR.js images that are screenshots of the games.
+ *      A hash check cannot recognise those, so they are blocked by base name, case-insensitive, in
+ *      any subfolder: forge_screen_01.jpg .. forge_screen_03.jpg, kotor_forge.jpg, screens.psd
+ *      (src/assets/launcher/images/, built into launcher/images/) and K1-Screen-*.jpg,
+ *      K2-Screen-*.jpg (images/screenshots/). They are part of the upstream git tree, so git tree
+ *      scans do not apply this rule; a --dir scan (what gets deployed) does.
  *
  * What it scans:
  *   - every file in the git tree being pushed (HEAD by default; the pushed commits in --hook mode)
- *   - every file under each --dir (for example the web build output before a deploy)
+ *   - every file under each --dir (for example the deploy folder made by
+ *     scripts/kotor3/prepare-deploy.mjs)
  *
  * Usage:
- *   node scripts/scan-no-game-files.mjs --game-dir "<KOTOR II folder>" [--dir dist] [--no-git] [--hook]
+ *   node scripts/scan-no-game-files.mjs --game-dir "<KOTOR II folder>" [--dir <folder>]... [--no-git] [--hook]
  *   The game folder can also come from the KOTOR2_DIR environment variable.
  *   The game folder is only read, never written.
+ *
+ * Exit codes: 0 pass, 1 problems found, 2 usage error.
  */
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
@@ -27,6 +36,14 @@ import path from 'node:path';
 const BLOCKED_EXT = new Set(['bif', 'key', 'rim', 'erf', 'tpc', 'tga', 'mdl', 'mdx', 'wav', 'mp3', 'wmv', 'bik']);
 const BLOCKED_NAMES = new Set(['dialog.tlk']);
 const MOD_PATH = /(^|\/)mods\/kotor3\//i;
+// Upstream screenshots of the games: never deployed (rule 3, --dir scans only).
+const DEPLOY_BLOCKED = [
+  /^forge_screen_0[1-3]\.jpg$/i,
+  /^kotor_forge\.jpg$/i,
+  /^screens\.psd$/i,
+  /^k1-screen-.*\.jpg$/i,
+  /^k2-screen-.*\.jpg$/i,
+];
 
 // ---------- arguments ----------
 const argv = process.argv.slice(2);
@@ -105,7 +122,11 @@ for (const d of opts.dirs) {
   if (!fs.existsSync(root)) { violations.push(`--dir not found: ${d}`); continue; }
   walk(root, (full) => {
     const rel = path.relative(root, full);
-    addCandidate(`${d}/${rel}`, fs.statSync(full).size, () => fs.readFileSync(full));
+    const label = `${d}/${rel}`.replace(/\\/g, '/');
+    if (DEPLOY_BLOCKED.some((re) => re.test(baseOf(full)))) {
+      violations.push(`upstream game screenshot, blocked from deploys: ${label}`);
+    }
+    addCandidate(label, fs.statSync(full).size, () => fs.readFileSync(full));
   });
 }
 

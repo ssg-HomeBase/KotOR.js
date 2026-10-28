@@ -1,0 +1,41 @@
+{
+  "resref": "k3_kiri",
+  "comment": "KOTOR III (fan) Nar Shaddaa landing pad. Kiri, an old refugee, remembers a Mandalorian asking about old routes. Original writing for this fan project.",
+  "start": ["E0"],
+  "entries": [
+    {
+      "id": "E0",
+      "text": "Mind the crates, dear. Everything I own is packed in them. Are you lost, or only new here? On this pad the two look much the same.",
+      "replies": ["R0", "R1"]
+    },
+    {
+      "id": "E1",
+      "text": "Then you want the Mandalorian. Scarred armour, quiet voice. She came through here asking about the old routes too, and about a ship that never came home.",
+      "script": "k3_q_nav20",
+      "replies": ["R3", "R4"]
+    },
+    {
+      "id": "E2",
+      "text": "Long enough to stop counting. They keep promising a transport. I keep my crates tied up anyway, in case one day somebody means it.",
+      "replies": ["R2"]
+    },
+    {
+      "id": "E3",
+      "text": "She keeps to the far end of the pad, watching the ships land. If you want more than an old woman's guess, the Duros broker sells names.",
+      "replies": []
+    },
+    {
+      "id": "E4",
+      "text": "Everyone here is dangerous, dear. But she gave half her ration bar to my neighbour's boy and asked for nothing back. That counts with me.",
+      "replies": ["R5"]
+    }
+  ],
+  "replies": [
+    { "id": "R0", "text": "I am looking for someone who knows the old routes past the charts.", "next": "E1" },
+    { "id": "R1", "text": "How long have you been waiting here?", "next": "E2" },
+    { "id": "R2", "text": "I hope it comes soon. Have you seen anyone asking about routes past the charts?", "next": "E1" },
+    { "id": "R3", "text": "Where can I find her?", "next": "E3" },
+    { "id": "R4", "text": "Is she dangerous?", "next": "E4" },
+    { "id": "R5", "text": "Then where would I find her?", "next": "E3" }
+  ]
+}

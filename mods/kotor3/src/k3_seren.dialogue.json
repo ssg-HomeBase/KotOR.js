@@ -1,11 +1,12 @@
 {
   "resref": "k3_seren",
   "comment": "KOTOR III (fan) opening scene. Seren Vaux, a courier on Citadel Station, carries the Exile's last recording. Original writing for this fan project.",
-  "start": ["E0"],
+  "start": ["E8", "E0"],
   "entries": [
     {
       "id": "E0",
       "text": "Hold a moment. Everyone on this dock walks past me, but you slowed down. I have been carrying a message for three years, and I think it was meant for you.",
+      "script": "k3_q_sig10",
       "replies": ["R0", "R1"]
     },
     {
@@ -31,12 +32,25 @@
     {
       "id": "E5",
       "text": "Meet me at the docking ring when you are ready. Bring a ship that can make the long jump, and friends who will not turn back when the stars run out.",
-      "replies": []
+      "script": "k3_probe",
+      "replies": ["R7"]
     },
     {
       "id": "E6",
       "text": "Suit yourself. The message is not going anywhere, and neither am I. But whatever she found out there will not wait forever.",
       "replies": []
+    },
+    {
+      "id": "E7",
+      "text": "Then I am coming with you. My courier shuttle is fuelled, and the credits I just handed you will cover the clearance fee. The security officer on this dock still has to clear the shuttle before we lift.",
+      "script": "k3_sv_join",
+      "replies": []
+    },
+    {
+      "id": "E8",
+      "text": "You came back. Good. The seal has not gone quiet since you left, and in all this time it has never answered anyone else.",
+      "active": "k3_c_metsv",
+      "replies": ["R8", "R9"]
     }
   ],
   "replies": [
@@ -46,6 +60,9 @@
     { "id": "R3", "text": "What was the warning?", "next": "E3" },
     { "id": "R4", "text": "Why bring this to me?", "next": "E4" },
     { "id": "R5", "text": "Then I will go. Tell me where.", "next": "E5" },
-    { "id": "R6", "text": "I need time to think about this.", "next": "E6" }
+    { "id": "R6", "text": "I need time to think about this.", "next": "E6" },
+    { "id": "R7", "text": "Why wait for a ship? I am ready to leave today.", "next": "E7" },
+    { "id": "R8", "text": "Then tell me again. Why does it answer to me?", "next": "E4" },
+    { "id": "R9", "text": "First, repeat the warning for me.", "next": "E3" }
   ]
 }

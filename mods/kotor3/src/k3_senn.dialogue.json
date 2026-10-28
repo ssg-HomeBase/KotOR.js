@@ -1,0 +1,47 @@
+{
+  "resref": "k3_senn",
+  "comment": "KOTOR III (fan) Citadel Station docks. Lieutenant Senn of the Telos Security Force clears Seren's shuttle. Original writing for this fan project.",
+  "start": ["E0", "E1"],
+  "entries": [
+    {
+      "id": "E0",
+      "text": "Lieutenant Senn, Telos Security Force. Courier Vaux has filed to depart with a passenger aboard. I take it the passenger is you?",
+      "active": "k3_c_svjoin",
+      "replies": ["R0", "R1"]
+    },
+    {
+      "id": "E1",
+      "text": "This walkway is for registered dock traffic. If you have no vessel to declare, please keep it clear.",
+      "replies": []
+    },
+    {
+      "id": "E2",
+      "text": "The shuttle passed its inspection this morning, and the clearance fee is in. One last question for the log. Where is it bound?",
+      "replies": ["R3", "R4"]
+    },
+    {
+      "id": "E3",
+      "text": "Only as long as you make it. Every departure gets the same checks while the restoration goes on. I do not skip steps for anyone, courier or captain.",
+      "replies": ["R2"]
+    },
+    {
+      "id": "E4",
+      "text": "Nar Shaddaa. I will not ask why. Keep your wits about you there, and keep the courier out of trouble. Your shuttle is cleared for departure.",
+      "script": "k3_go_nar",
+      "replies": []
+    },
+    {
+      "id": "E5",
+      "text": "It matters to the log, and the log matters to me. Name a destination, or the shuttle stays clamped to this dock.",
+      "replies": ["R5"]
+    }
+  ],
+  "replies": [
+    { "id": "R0", "text": "That's me. We would like to leave today.", "next": "E2" },
+    { "id": "R1", "text": "Will this take long?", "next": "E3" },
+    { "id": "R2", "text": "Fair enough. Carry on with your checks.", "next": "E2" },
+    { "id": "R3", "text": "Nar Shaddaa.", "next": "E4" },
+    { "id": "R4", "text": "Does that matter?", "next": "E5" },
+    { "id": "R5", "text": "Nar Shaddaa, then.", "next": "E4" }
+  ]
+}

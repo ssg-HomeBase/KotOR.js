@@ -96,8 +96,8 @@ export class SaveGame {
   static FolderRegexValidator: RegExp = /^(\d+) - (Game\d+)$|^(000000) - (QUICKSAVE)$|^(000001) - (AUTOSAVE)$/;
   /** Regular expression to match valid save game folder name patterns */
   static FolderNameRegex: RegExp = /^(\d+) - (QUICKSAVE|AUTOSAVE|Game\d+)$/;
-  /** The next available save ID for new saves */
-  static NEXT_SAVE_ID: number = 1;
+  /** The next available save ID for new saves (KOTOR III Phase 2: starts at 2; 0 and 1 are the quick save and autosave) */
+  static NEXT_SAVE_ID: number = 2;
   /** The ERF object containing the save game data */
   SAVEGAME: ERFObject;
   //NEXT_SAVE_ID - 0 QUICKSAVE
@@ -858,7 +858,9 @@ export class SaveGame {
     GameState.MenuManager.LoadScreen.open();
     GameState.MenuManager.LoadScreen.showSavingMessage();
 
-    let save_id = replace_id >= 2 ? replace_id : SaveGame.NEXT_SAVE_ID++;
+    // KOTOR III Phase 2: replace_id comes only from OverwriteSave (the save list leaves out the quick save and
+    // autosave), so 1 is a manual save made when numbering started at 1; overwrite it in place too.
+    let save_id = replace_id >= 1 ? replace_id : SaveGame.NEXT_SAVE_ID++;
 
     //Prepare SaveGame directory
     if(!(await GameFileSystem.exists(SaveGame.base_directory))){
@@ -981,7 +983,8 @@ export class SaveGame {
 
     //Global Booleans
     const catBooleanList  = gvt.RootNode.addField(new GFFField(GFFDataType.LIST, 'CatBoolean'));
-    const boolBuffer =  new Uint8Array( ( GameState.GlobalVariableManager.Globals.Boolean.size / 8 ) );
+    // KOTOR III Phase 2: round up, or the last booleans (where a mod's globals sit) are cut off.
+    const boolBuffer =  new Uint8Array( Math.ceil( GameState.GlobalVariableManager.Globals.Boolean.size / 8 ) );
     let i = 0;
     GameState.GlobalVariableManager.Globals.Boolean.forEach( (globBool, key: string) => {
       let boolean = globBool;
@@ -989,7 +992,8 @@ export class SaveGame {
       let bit_index = (i % 8);
 
       if(boolean.value){
-        boolBuffer[byte_offset] |= 1 << bit_index;
+        // KOTOR III Phase 2: highest bit first, as loadGlobalVARS reads it (and as the games store it).
+        boolBuffer[byte_offset] |= 1 << (7 - bit_index);
       }
 
       let boolStruct = new GFFStruct();

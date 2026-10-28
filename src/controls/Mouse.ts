@@ -86,13 +86,17 @@ export class Mouse {
     }
 
     if(res.isDynamicRes){
-      Mouse.positionViewport.x = x;
-      Mouse.positionViewport.y = y;
+      // KOTOR III Phase 2 (finding 32): the game works in a virtual screen (the window divided by uiScale).
+      const ui = ResolutionManager.uiScale || 1;
+      const vx = x / ui, vy = y / ui;
+      const vw = window.innerWidth / ui, vh = window.innerHeight / ui;
+      Mouse.positionViewport.x = vx;
+      Mouse.positionViewport.y = vy;
 
-      Mouse.position.x = Mouse.Vector.x = ( x / window.innerWidth ) * 2 - 1;
-      Mouse.position.y = Mouse.Vector.y = - ( y / window.innerHeight ) * 2 + 1; 
-      Mouse.positionUI.x = Mouse.Vector.x = ( x - (window.innerWidth/2) );
-      Mouse.positionUI.y = Mouse.Vector.y = - ( y -(window.innerHeight/2) ); 
+      Mouse.position.x = Mouse.Vector.x = ( vx / vw ) * 2 - 1;
+      Mouse.position.y = Mouse.Vector.y = - ( vy / vh ) * 2 + 1;
+      Mouse.positionUI.x = Mouse.Vector.x = ( vx - (vw/2) );
+      Mouse.positionUI.y = Mouse.Vector.y = - ( vy -(vh/2) );
     }else{
       Mouse.positionViewport.x = x - ((ResolutionManager.windowResolution.width/2) - ((res.width)/2));
       Mouse.positionViewport.y = y - ((ResolutionManager.windowResolution.height/2) - ((res.height)/2));

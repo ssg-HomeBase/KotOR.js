@@ -33,6 +33,10 @@ export class AppState {
    * initApp
    */
   static async initApp(){
+    // KOTOR III Phase 2: the game app never writes into the player's game folder. Saves, the
+    // in-progress module state, settings and screenshots go to the app's own storage instead
+    // (src/utility/GameFileSystem.ts, initUserDataStorage).
+    KotOR.GameFileSystem.gameFolderReadOnly = true;
     if(window.location.origin === 'file://'){
       AppState.env = ApplicationEnvironment.ELECTRON;
     }else{
@@ -45,6 +49,12 @@ export class AppState {
     }
     KotOR.ApplicationProfile.SetProfile(AppState.appProfile);
     KotOR.ApplicationProfile.InitEnvironment();
+    try{
+      await KotOR.GameFileSystem.initUserDataStorage();
+    }catch(e){
+      // Saving will not work, but the game folder stays untouched: writes are refused, not redirected.
+      console.error('GameFileSystem: could not open the app storage for saves', e);
+    }
 
     applyProfileSeo(buildProfileSeo(AppState.appProfile, {
       appPath: '/game/',
@@ -227,8 +237,10 @@ export class AppState {
     if(AppState.env == ApplicationEnvironment.ELECTRON){
       KotOR.ApplicationProfile.directory = AppState.appProfile.directory;
     }else{
-      KotOR.ApplicationProfile.directoryHandle =
-        AppState.appProfile.directory_handle ?? KotOR.ApplicationProfile.directoryHandle;
+      // A folder picked this visit with the older picker wins over any folder saved earlier.
+      KotOR.ApplicationProfile.directoryHandle = (KotOR.ApplicationProfile.directoryHandle as any)?.isFileListEntry
+        ? KotOR.ApplicationProfile.directoryHandle
+        : (AppState.appProfile.directory_handle ?? KotOR.ApplicationProfile.directoryHandle);
     }
     console.log('loading game...');
     AppState.loaderInit(AppState.appProfile.background, AppState.appProfile.logo);
@@ -286,8 +298,12 @@ export class AppState {
    */
   static async attachDirectoryHandle(handle: FileSystemDirectoryHandle){
     KotOR.ApplicationProfile.directoryHandle = handle;
-    AppState.appProfile.directory_handle = handle;
-    KotOR.ConfigClient.set(`Profiles.${AppState.appProfile.key}.directory_handle`, handle);
+    // KOTOR III Phase 2: a folder from the older picker (FileListDirectory) is kept for this visit only;
+    // saving it would copy the whole game into browser storage.
+    if(!(handle as any)?.isFileListEntry){
+      AppState.appProfile.directory_handle = handle;
+      KotOR.ConfigClient.set(`Profiles.${AppState.appProfile.key}.directory_handle`, handle);
+    }
     AppState.directoryLocated = true;
     if(AppState.shouldDeferForAudioUnlock()){
       AppState.processEventListener('on-preload', []);
@@ -302,7 +318,12 @@ export class AppState {
    */
   static async validateDirectoryHandle(handle: FileSystemDirectoryHandle){
     try{
-      if ((await handle.requestPermission({ mode: 'readwrite' })) === 'granted') {
+      // KOTOR III Phase 2: read-only. The game folder is never written (saves live in the browser's own storage).
+      // Check first: asking again outside a click throws in Chrome even when access was already given.
+      if ((await (handle as any).queryPermission({ mode: 'read' })) === 'granted') {
+        return true;
+      }
+      if ((await handle.requestPermission({ mode: 'read' })) === 'granted') {
         return true;
       }
       return false;

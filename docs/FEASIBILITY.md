@@ -110,7 +110,7 @@ Each player must own KOTOR II and run the same mod version; the co-op layer neve
 4. Co-op spike (2 weeks, separate branch): two browsers see each other walk around one area. Go or no-go on the full co-op estimate after it.
 5. Same guard: the scan and pre-push hook stay on; every release is checked against the player's game folder.
 
-## Cam's test checklist (no terminal)
+## Cam's test checklist, Phase 1 (replaced by the Phase 2 checklist at the end of this file)
 
 You do not need to type any commands. Allow about 20 minutes.
 
@@ -158,3 +158,147 @@ Leave this Chrome tab open and do part C in File Explorer.
 31. When you are done, close the Chrome tabs and the black window.
 
 Tell Claude what you saw at each step that did not match, especially steps 20, 26 and 27: these were not covered by the automated test.
+
+
+---
+
+# Phase 2 (2026-10-25)
+
+Branch `kotor3-phase2` (PR 2) and `kotor3-coop-spike` (PR 3), built on Phase 1 (PR 1). Plan: docs/PHASE2.md; episode design: docs/EPISODE1.md; tests: research/TEST_LOG_PHASE2.md; co-op: research/COOP_SPIKE.md.
+
+## Verdict (Phase 2)
+
+**The first episode is playable end to end, and the engine no longer touches the player's game folder.** "The Last Signal", Episode 1 (the Citadel Station prologue and the Nar Shaddaa opening, about 30 to 45 minutes, text only), plays from New Game to its last scene in the KotOR.js desktop app on the player's own KOTOR II files, with 10 conversations, 3 quests and two companions who join the party, and survives a save and a load in the middle (automated playthrough, now 12 of 12 checks). It is deployed as a private Vercel preview behind Vercel login. Two game windows on one PC saw each other move over WebRTC (co-op spike: go, with conditions).
+
+## What was fixed in Phase 2, and how it was tested
+
+| Item | Fix (file) | Test (research/TEST_LOG_PHASE2.md) |
+|---|---|---|
+| Game folder writes (Phase 1 "What broke" item 1) | The game app never writes into the chosen folder: saves, `gameinprogress`, settings (`swkotor2.ini`, written at `src/engine/INIConfig.ts:150`) and screenshots go to the app's own storage, Electron `userData` or the browser's origin private file system (`src/utility/GameFileSystem.ts`, switched on in `src/apps/game/states/AppState.ts`; IPC `get-user-data-path` in `src/electron/WindowManager.ts:67`). The browser asks for read permission only. | M1 test: after a session with a save and a load, the stand-in folder's root and the real game folder (19,487 entries) are unchanged; the save files are in `electron-profile/game-data/kotor3/Saves`. Episode playthrough: same check, unchanged. Web check: browser storage write, read, list and remove |
+| Chrome's Program Files block (item 11) | The Grant Access box says it in plain words and tells the player to copy the game to `C:\Games` (`src/apps/game/components/modal-grant-access/modalGrantAccess.tsx`) | Web check: the text shows in the box |
+| Number keys (item 3) | Keys 1 to 9 pick replies (`src/controls/KeyMapper.ts`, after the key-table binding) | M1 test and the whole playthrough choose every reply with a real key press |
+| Script pipeline (engine gap) | Mod `.nss` files compile at build time with the in-tree compiler; `verify-mod` checks every `.ncs` against a fresh compile (`scripts/kotor3/build-mod.ts`, `verify-mod.ts`) | M1 test: a compiled probe script gives exactly 77 credits in game; the episode runs 17 compiled scripts |
+| Base-game plot in reused areas (design issue) | Manifest `switchOff` per area for triggers, creatures, scripts and conversations (`src/managers/ModSwitchOff.ts`, hooks in `src/module/ModuleArea.ts`, `src/nwscript/NWScript.ts`, `src/managers/CutsceneManager.ts`); manifest `onEnter` runs the mod's own area script (`src/module/ModuleArea.ts:2149`) | M1 test and playthrough: KOTOR II's arrival conversation in `201tel` never starts; no base-game conversation in the whole playthrough |
+| Campaign data (engine gap) | The mod's globals, quests and plot rows come from `mods/kotor3/campaign.json` and are added in memory (`src/managers/ModManager.ts`); no game table is edited or shipped | Playthrough: 3 quests to their last stage; journal text, quest stages and party come back after a load |
+| Deploys (Phase 1 grader note 1) | `scripts/scan-no-game-files.mjs` blocks the upstream game screenshots in deploy scans; `scripts/kotor3/prepare-deploy.mjs` builds, copies and scans | Negative test: a blocked file fails the scan (exit 1); preview file list: 0 blocked files |
+| Full screen (Cam's request, 2026-10-26) | A full-screen button at the top centre of the game page, like a video player's: it shows while the mouse moves and fades when it is still; the browser's F11 also works (`src/apps/game/components/fullscreen-button/fullscreenButton.tsx`, added in `src/apps/game/app.tsx:35`). The F key stays the game's (cancel combat). | Browser playthrough: a real click turns full screen on, a second click turns it off (w17) |
+| Hosting (Phase 1 used fallback F5) | Protected Vercel preview of project `kotor3-preview` (Vercel Authentication on all deployments, previews only) | READY; unauthenticated requests redirect to Vercel login; 0 production deployments |
+
+## What broke in KotOR.js in Phase 2 (file and line, branch `kotor3-phase2`)
+
+| # | Problem | File and line | Status |
+|---|---|---|---|
+| 13 | A brand-new journal quest was built but never added to the list, so new quests never appeared or saved. | `src/managers/JournalManager.ts:86` | Fixed |
+| 14 | Boolean globals were saved lowest bit first while the loader (and the games) read highest bit first, and the last partial byte was cut off; every saved boolean came back scrambled. | `src/engine/SaveGame.ts:986`, `:995` | Fixed |
+| 15 | `AddPartyMember` did not record the party slot, so a companion added by script was missing from saves. | `src/managers/PartyManager.ts:778` | Fixed |
+| 16 | A loaded companion without a portrait was placed on the player's party slot (an empty portrait matched an empty saved slot). | `src/managers/PartyManager.ts:940` | Fixed |
+| 17 | Journal text was looked up only in the game's string table, so a mod's own quest text was blank. | `src/engine/JournalEntry.ts:31` | Fixed |
+| 18 | Base-game area files carry no tag for triggers; the tag lives in the trigger's template, so switching a trigger off by tag needs the template read. | `src/module/ModuleArea.ts:1070` | Handled |
+| 19 | A conversation started by a script while another one is still on screen is silently dropped: the dialog action fails while the game is in dialogue mode. Mod scripts must wait until none is active. | `src/actions/ActionDialogObject.ts:55`; the mod waits in `mods/kotor3/src/k3_inc_main.nss:32` | Worked around |
+| 20 | Settings were written into the game folder whenever options changed. | `src/engine/INIConfig.ts:150` | Fixed (now app storage) |
+| 21 | With saves in the app's own storage, the game app no longer lists saves that live in the game folder's `Saves` folder (for example saves from the original KOTOR II). | `src/utility/GameFileSystem.ts:49` (`USER_DATA_DIRS`) | Open, by design for now |
+| 22 | Found by Cam in Chrome on 2026-10-25 (checklist step 9): after picking `C:\Games\Knights of the Old Republic II`, nothing happened and GRANT ACCESS opened the picker again. First, errors from the picker and the permission request were never caught, so every refusal looked like nothing (fixed: the box now explains). Then, with messages on, Cam's Chrome showed that the newer folder access (`window.showDirectoryPicker`) refuses that folder with `AbortError` and then refuses at once; the cause sits in that Chrome profile (the run could not inspect it; the profile is not the one the Claude extension is connected to). Fix: a second way in, Chrome's older folder picker (`<input webkitdirectory>`), read through a read-only stand-in folder object. The older picker does not follow links (junctions), so it needs a folder with real files such as the `C:\Games` copy. | before: `src/apps/game/components/modal-grant-access/modalGrantAccess.tsx:21`, `:26` (Phase 1 lines); fix: same file `:49` (messages, CONTINUE), `:85` and `:90` (second picker), `:186` (button); `src/utility/FileListDirectory.ts:28`, `:71`; `src/utility/GameFileSystem.ts:261`; `src/apps/game/states/AppState.ts:241`, `:303`, `:317` | Fixed; browser path tested end to end; Cam to retry |
+| 23 | Found by Cam in Chrome on 2026-10-25 (checklist step 21): the Save Game name box opened, but nothing in it worked and it stayed on screen even after leaving the menu. The KOTOR II name box skipped the setup that gives the edit box its keys and OK and Cancel their actions, and the KOTOR II save menu never saved: a new slot only logged the name, and overwriting did nothing. The same menu's Delete button had no action, and its character-name filter dropped the New Save slot once one save existed. Testing the fix found one more: overwriting the first save made a copy, because new saves were numbered from 1 (the autosave's number) while overwrite replaces only numbers 2 and up (this also affects KOTOR I). Fix: the KOTOR I save menu's behaviour in KOTOR II (name box, save, overwrite after a question, delete after a question), the New Save slot kept, new saves numbered from 2. | before (at `1870a27a`): `src/game/tsl/menu/MenuSaveName.ts:28`, `src/game/tsl/menu/MenuSaveLoad.ts:70`, `:72`, `:151`, `src/engine/SaveGame.ts:100`, `:861`; fix: `src/game/tsl/menu/MenuSaveName.ts:30`, `src/game/tsl/menu/MenuSaveLoad.ts:69`, `:80`, `:97`, `:179`, `src/engine/SaveGame.ts:100`, `:863` | Fixed; save, overwrite, delete and load tested through the menus in the desktop app and in the browser; Cam to retry |
+| 24 | Found by Cam in Chrome on 2026-10-25 (checklist step 22): after loading a save, every character the mod adds was there twice, two copies on one spot, one in a different pose. When an area loads, the mod adds its characters and skips any the save already has, matching on the template name; but a saved character carries no template name (the loader reads a template name as "merge the template over this character", so saves leave it out), so the match never hit and each mod character was added a second time. Fix: also match on the tag from the character's template, which saves keep; saves made before the fix load correctly too. | before (at `b494f133`): `src/module/ModuleArea.ts:1136`; why (current lines): `src/module/ModuleCreature.ts:3151` (a template name means merge) and `:4220` (the save writes none); fix: `src/module/ModuleArea.ts:100`, `:1148` | Fixed; every save and load test now compares the characters in the area before the save and after the load (desktop and browser), and a save made before the fix loads with each character once; Cam to retry |
+| 25 | Found by Cam in Chrome on 2026-10-26 (checklist steps 23 and 24): no quests in the journal, and the game "froze" when he went on to talk to characters on Nar Shaddaa. The quests were in the game; the KOTOR II journal could not draw them: each row took its title from the game's string table by number, the mod's quests have their own text and no number, the lookup threw, and the row was never built. Opening that journal also threw part way (a KOTOR I step labels a sort button KOTOR II does not have), and the KOTOR II journal skipped the KOTOR I setup, so Close, picking a quest and the completed-quests button did nothing: once in the journal, only Esc got out. The checklist itself was wrong: it said L, but KOTOR II's own key map (loaded from the player's files) binds L to Messages and J to the journal, so L showed an empty Messages screen. The freeze was not reproduced in this run's playthroughs (desktop and browser, every conversation by click, before and after a load); the journal with a dead Close button is the likely cause. Fix: rows use the quest's own title; the KOTOR II journal sets up Close, picking a quest and the completed/active filter; its labels no longer touch the missing button; the checklist says J. | before (at `89642209`): `src/game/tsl/gui/GUIJournalItem.ts:32`, `src/game/tsl/menu/MenuJournal.ts:47`, `src/game/kotor/menu/MenuJournal.ts:158`, `:181`; keys: `src/controls/IngameControls.ts:813` (Messages), `:820` (journal); fix: `src/game/tsl/gui/GUIJournalItem.ts:34`, `src/game/tsl/menu/MenuJournal.ts:66`, `:73`, `:78`, `:119`, `:124`, `src/game/kotor/menu/MenuJournal.ts:182` | Fixed; the episode test and a new browser playthrough (`scripts/kotor3/e2e-web-episode.mjs`: the checklist in the browser build, every conversation by click, Messages with L, the journal with J and from the top bar, menu save and load, the last scene, fails if the page stops answering) check the journal screen |
+| 26 | Found by this run's browser playthrough on 2026-10-26: after a load, every quest was in the journal twice, and later updates changed only one copy (the other stayed at its old stage, so a finished quest also showed as active). Loading a save added the saved quests without clearing the ones from before the load; a new game did not clear them either. | before (at `89642209`): `src/managers/PartyManager.ts:262`; fix: `src/managers/PartyManager.ts:264` (a load clears the journal first), `src/game/tsl/menu/CharGenQuickPanel.ts:56` and the KOTOR I character panels (a new game starts with an empty journal) | Fixed; the browser playthrough checks the journal at the end of the episode, after a load (three finished quests, none active, no duplicates) |
+| 27 | Found by Cam in Chrome on 2026-10-26 (on a laptop, game folder in Google Drive): in the first area a character "looked like it was flying" and glided across the floor when he talked to it. Some bodies (Ithorians, protocol droids) have only their own short set of animations; when the engine asked one of them for an animation it does not have (an idle variant such as `pause3`), the model played nothing, so the body stood in its stiff default pose and slid when it moved or turned. In the first area both Ithorians and a protocol droid were often in that pose. A character can also load with no animations when the folder cannot be fully read (finding 29): in one simulated run with 4% of model reads failing, Brannick came up playing nothing. Fix: when a body lacks the animation asked for, it plays the nearest one it has (its own `c` version, its walk or run when moving, otherwise its idle). | before (at `f47eeceb`): `src/module/ModuleCreature.ts:1116` (plays the name as asked), `src/module/ModuleObject.ts:1008` (`pause3` has no row for these bodies); fix: `src/module/ModuleCreature.ts:1112`, `:1134` | Fixed; the browser playthrough now checks every character in both areas plays an animation (none in its default pose in 4 of 6 looks) |
+| 28 | Reported by Cam on 2026-10-26: dialogue lines change before he can finish reading them. No line in the mod has a voice-over or a time of its own, and such a line stayed up 3 seconds whatever its length (Seren's 154-character opening too). Fix: an unvoiced line with no time of its own stays up 1 second plus 45 ms per character, at least 3 and at most 12 seconds (Seren's opening: about 8 seconds). A click still skips a line; voiced lines and lines with their own time are unchanged. | before (at `f47eeceb`): `src/managers/CutsceneManager.ts:268`; fix: `src/managers/CutsceneManager.ts:29`, `:319` | Fixed; the browser playthrough checks Seren's first line stays up for its length |
+| 29 | Found by Cam on 2026-10-26 (on a laptop, game folder in Google Drive, files not downloaded): part way through a conversation the screen went black and stayed black, with sound still playing. Reproduced in the browser build by making game files unreadable the way a cloud-only file is: when Senn's last line sends the party to Nar Shaddaa and a Nar Shaddaa file cannot be read, the error was only logged, the area load stopped part way, and the game sat on the faded-out loading screen for good; New Game hung the same way with model reads failing. Fix: a failed read is tried again three times with a fresh copy of the file (after 0.4, 1.5 and 4 seconds); if it still fails, the page shows a message that names the file, says the folder is probably in a cloud folder that is not downloaded, says what to do, and has a Reload button. The checklist now says the game folder must be on the computer. | before (at `f47eeceb`): `src/utility/GameFileSystem.ts:276` (one read; the error is thrown and nobody is told), `src/GameState.ts:1098` (a failed area load is logged and the loading screen stays up); fix: `src/utility/GameFileSystem.ts:267`, `:291`, `:310`, `:373` | Fixed; new `scripts/kotor3/e2e-web-read-fail.mjs`: reads that fail once are tried again and New Game reaches the first area; a Nar Shaddaa file that never reads stops the trip with the message (file name, what to do, Reload) |
+| 30 | Found by Cam in Chrome on 2026-10-26: after giving a refugee on Nar Shaddaa money, a scene showed two identical refugees (one moving, one not); afterwards a see-through refugee lay on the ground, still offering the old conversation, and a new conversation started by itself. That refugee's conversation is KOTOR II's own Kreia lesson: it runs scripts that move the refugee, spawn a second one (`Refugee4`) and fade the first, and it needs Kreia, who is not in this sequel. The run then reviewed everything KOTOR II still runs in both areas: 21 base-game conversations on Nar Shaddaa and 16 on Citadel Station belong to KOTOR II's story or open its scenes and terminals (the Exile's search, the Exchange's bounty on Jedi, Kreia, Atton, Czerka), six Citadel Station triggers start KOTOR II scenes or its orbital shuttle when walked through (the Ithorian scene ends in a fight), and five exits lead out of the episode (other Nar Shaddaa areas, the rest of Telos, the Ebon Hawk). Fix: the manifest switches all of these off (`switchOff`: conversations, triggers, and a new `doors` kind that keeps an exit shut and leading nowhere). Clicking such a character now shows a short line of the mod's own (always the same one for the same character), a switched-off terminal says it stays dark, and a sealed exit says so (`switchOffText`, checked by `check-text.mjs`). One-line descriptions and passers-by with no plot (for example the dock guard's warning) are kept. | before (at `793d6fef`): `mods/kotor3/manifest.json` (switch-off covered only the arrival triggers, `201bay` and the Exchange thugs), `src/managers/CutsceneManager.ts:91` (a switched-off conversation did nothing at all); fix: `src/managers/ModSwitchOff.ts:12`, `:54`, `src/module/ModuleArea.ts:1822` (doors), `src/module/ModuleDoor.ts:408`, `src/managers/CutsceneManager.ts:118`, `:52`, `src/module/ModuleCreature.ts:2177`, `src/module/ModulePlaceable.ts:174`, `mods/kotor3/manifest.json` | Fixed; a sweep clicked every character, door and terminal in both areas (each answers, nothing doubles or turns see-through); the browser playthrough checks a switched-off Ithorian and the sealed exit (w15) |
+| 31 | Found by Cam in Chrome on 2026-10-26: after choosing "Nar Shaddaa." in Lieutenant Senn's conversation, the trip started at once, before Senn's last line could be read. The line's own script calls `StartNewModule`, which loaded the next area immediately. Fix: an area change asked for by a line's script now waits until that line has had its reading time (or the player clicks past it), then the conversation ends and the trip starts; this holds for every conversation that ends in travel. | before (at `793d6fef`): `src/nwscript/NWScriptDefK1.ts:6400`; fix: `src/nwscript/NWScriptDefK1.ts:6401`, `src/managers/CutsceneManager.ts:62`, `:402`, `:527` | Fixed; Senn's last line (140 characters) now stays up about 7 seconds before the area changes; the browser playthrough checks it (w14) |
+| 32 | Found by Cam in Chrome on 2026-10-26: the menus were very small on his screen and words ran off the edges. KOTOR II's menus are laid out for an 800x600 screen and were drawn at that size in any window: about 40% of a 1920x1080 screen, and cut off at the top and bottom in a short laptop window (a 1280x600 window at 150% display scaling). Fix: the game now works in a virtual screen of about 960x720 (the window divided by a scale factor) and draws it at the window's full size and sharpness (pixel ratio = scale x the screen's own ratio, capped at 2); the mouse is mapped back the same way. At 1920x1080 the menus are 1.5 times larger; in the short laptop window they fit. | before (at `793d6fef`): `src/managers/ResolutionManager.ts:124` (viewport = window size), no pixel ratio set in `src/GameState.ts`; fix: `src/managers/ResolutionManager.ts:22`, `:25`, `:142`, `src/GameState.ts:902`, `:926`, `src/controls/Mouse.ts:90` | Fixed; at 1920x1080, 1536x730 (125%) and 1280x600 (150%) the Options menu fits and a real mouse click on its Close button closes it (w16) |
+| 33 | Found by this run's browser playthrough on 2026-10-26: two errors thrown inside the game's frame update, each skipping the rest of that frame. (1) The arrow over the selected character is recoloured when the selection changes between friend and foe; the KOTOR I overlay keeps the arrow's material for that, but the KOTOR II overlay skips the KOTOR I setup and never stored it, so the recolour threw. (2) While a save loads, the old area is gone for a few frames but the in-game update still ran (it looked for selectable objects and ticked the area); the first guard covered only the tick, and the playthrough of 2026-10-28 caught the other. Neither was visible to the player on its own; the playthrough now fails on any uncaught page error. | before (at `793d6fef`): `src/game/kotor/menu/InGameOverlay.ts:689` (uses the material), `src/game/tsl/menu/InGameOverlay.ts:381` (KOTOR II never stores it), `src/GameState.ts:1510`; fix: `src/game/tsl/menu/InGameOverlay.ts:386`, `src/GameState.ts:1501` | Fixed; the browser playthrough checks the page throws nothing during the whole run (w18) |
+
+Outside KotOR.js: Vercel always makes a project's first deployment a production deployment, even with `--target preview`, and treats the next deployment as the first again if every deployment is deleted (https://vercel.com/docs/deployments/environments, read 2026-10-25). The run's first placeholder became production and its production URL was public for 78 seconds (one line of placeholder text); protection was widened to all deployments and, with Cam's approval, the two production placeholders were deleted. Every later deploy passes `--environment preview`, and the run never deletes the project's last deployment.
+
+## Measured run time (agent time on Cam's PC, 2026-10-25, waiting time excluded)
+
+| Milestone | Box | Measured |
+|---|---|---|
+| First actions (checks, PR 2, placeholder deploy, playtest copy, baseline) | | about 0.5 h (plus about 1.6 h waiting for Cam's two Vercel answers) |
+| M1 engine and preview | 5 h | about 0.6 h |
+| M2 episode | 6 h | about 0.5 h |
+| M3 co-op spike | 3 h | about 0.2 h (plus drafting while M2 tests ran) |
+| Finish and grading | 2 h | recorded in the run's STATE file and grader report |
+
+These are agent hours with helper agents working in parallel, not person-hours of a fan modder; the estimates below stay in person-hours.
+
+## Revised estimates
+
+### (a) Full KOTOR III campaign: about 8,200 person-hours
+
+Phase 1 estimated about 8,500. Phase 2 closed part of the engine gaps; the content estimates are unchanged (Phase 2's 10 conversations, 147 lines and 2,325 words do not change the per-conversation figure for a human writing team).
+
+| Engine gap (Phase 1 hours) | Left after Phase 2 | Why |
+|---|---|---|
+| New areas from mod files (200) | 200 | not started |
+| Script pipeline and per-area switch-off (150) | 70 | compile, verify and switch-off done; deeper base-game plot interactions remain |
+| Saves and mod state (150) | 30 | done in the desktop app and in the browser: the browser path is tested through the in-game menus (save, overwrite, load) and by the full browser playthrough (`scripts/kotor3/e2e-web-episode.mjs`) |
+| NWScript coverage (300) | 300 | the episode used about 20 routines, all present; the rest is unchecked |
+| Dialogue: number keys, voice, cameras (80) | 50 | number keys done |
+| Campaign data (120) | 40 | globals, quests and plot rows from mod data done; items and table rows remain |
+| Mod packaging (60) | 60 | |
+| Browser performance and cross-browser (140) | 140 | |
+| **Engine total (1,200)** | **890** | |
+
+Campaign total: 890 engine + 1,500 writing + 1,800 quests + 1,800 new areas + 360 reused areas + 480 characters + 300 UI and tables = 7,130, plus 15 percent testing (1,070) = about 8,200.
+
+### (b) Two-player co-op: about 1,300 person-hours
+
+Phase 1: about 1,400. The spike proved the transport and the avatar sync on one PC (research/COOP_SPIKE.md), so networking drops from 200 to 120 and object sync from 500 to 480; the rest is unchanged.
+
+## Recommended Phase 3 shape
+
+1. **Finish Act I in reused areas:** Dantooine (KOTOR II's own areas), Tamsin Rho and VX-9 join, the seal is tested (docs/STORY_BIBLE.md section 4). Same pipeline as Episode 1; about 10 more conversations and 3 quests.
+2. **First new area:** load an area (model, walkmesh, layout) from mod files, starting with a small Nathema test room; the largest open engine gap (200 hours).
+3. **Fewer Chrome workarounds for players:** a packaged desktop app (it reads `C:\Program Files` directly), and a decision on the upstream commercial fonts before any public link (Phase 1 grader note 2).
+4. **Co-op:** only after 1 to 3; the next step is internet play (STUN/TURN and a hosted signaling service) between two PCs.
+5. **Same guard:** the scan, the pre-push hook and the preview's protection stay on.
+
+## Cam's Phase 2 test checklist (no terminal)
+
+You do not need to type any commands. Allow about 45 minutes. Everything happens in Chrome, signed in to Vercel as your usual account (cctv75).
+
+**Preview link (private, opens only for you after you sign in to Vercel):** https://kotor3-preview-7is3mow51-itshot90210-9796s-projects.vercel.app
+
+### A. Your game copy (already done)
+1. The run already copied KOTOR II to `C:\Games\Knights of the Old Republic II` for you (Chrome cannot open folders under `C:\Program Files`). Nothing to do here. On another computer, such as a laptop, copy the folder onto that computer the same way: the game reads it while you play, so a folder in Google Drive or OneDrive works only if you first right-click it and make it available offline (otherwise the game stops with a message about a file it could not read). (If that folder is ever missing, open File Explorer, go to `C:\Program Files (x86)\Steam\steamapps\common`, right-click **Knights of the Old Republic II**, click **Copy**, go to `C:\Games`, right-click an empty spot and click **Paste**.)
+
+### B. Open the preview
+2. Open **Chrome** and click the preview link above (or paste it into the address bar and press **Enter**).
+3. If Vercel asks you to sign in, click **Continue with** the same account you always use for Vercel, and finish signing in. The KotOR.js launcher opens.
+
+### C. Start KOTOR III and point it at your copy
+4. In the launcher's left list under **Games**, click **KOTOR III (fan)**.
+5. Click **PLAY**. A new tab opens.
+6. Read the disclaimer and click **OK**.
+7. In the **Grant Access** box, read the note about Chrome and `C:\Games`, then click **GRANT ACCESS**.
+8. In the folder window, click its address bar, paste `C:\Games`, press **Enter**, click **Knights of the Old Republic II** once, then click **Select Folder**.
+9. If Chrome asks whether the site may view files, click **View files**. If the box shows a yellow message and the button says **CONTINUE**, click **CONTINUE**. **If nothing happens, or a yellow message says no folder was opened:** click **OPEN THE FOLDER ANOTHER WAY** (in the box), pick the same folder (`C:\Games`, click **Knights of the Old Republic II** once, then click **Upload** or **Select Folder**), and when Chrome asks "Upload ... files to this site?", click **Upload**. Nothing leaves your PC: the game only reads the files in this tab. (With this way you pick the folder again each time you reload the page.)
+10. If a **Click to Begin** box appears, click **BEGIN**.
+11. The logo movies play. Press **Esc** to skip each one. (Any time you move the mouse, a **Full screen** button shows at the top centre of the page; click it to fill the screen, and click it again, or press **Esc**, to leave full screen.)
+
+### D. New game (the prologue on Citadel Station)
+12. On the main menu, click **New Game**.
+13. Click any character, then click the button to choose it.
+14. Click **Quick Character**, then click the third button (**Play**). You load onto the Citadel Station docks. No Telos officer should start talking to you.
+15. Click **Seren** (a woman a few steps away) to talk. This time, **press the number keys** on your keyboard to choose replies: **1** picks the first reply, **2** the second.
+16. Keep pressing **1**: ask about the message, hear the warning, agree to go, and say you are ready to leave today. Seren joins you.
+17. Click **Brannick** (an older man nearby) and talk to him (press **1** at each choice).
+18. Click **Lieutenant Senn** (the security officer) and talk to her (press **1**). When she clears the shuttle, the game moves you to Nar Shaddaa.
+
+### E. Nar Shaddaa
+19. Seren starts talking on her own after you land. Press **1** at each choice.
+20. Talk to **Kiri** (an old woman by some crates), then **Zell Okkar** (a Duros), then **Rhea Vex** (a Mandalorian in armour). Rhea joins you.
+21. Save: press **Esc**, click **Save Game**, click the top row (the empty slot for a new save), click **Save**. A box asks for a name: type one (letters, numbers and spaces, up to 16 characters) and click **OK**. The box closes and your save appears in the list. Then click **Back** to return to the game.
+22. Load it again: press **Esc**, click **Load Game**, pick the save you just made, click **Load**. Check that Seren and Rhea are still with you and that every character appears only once.
+23. Press **J** (or click the journal icon in the bar at the top right; **L** opens the Messages screen instead). The journal lists The Last Signal and A Ship That Will Not Turn Back; the button above the list switches to completed quests, where A Navigator Past the Charts is. Click a quest to read it, then click **Close**.
+24. Talk to **Hesk Varo** (a Twi'lek), then **Corva** (a woman in grey), then **Hesk** again. The final scene starts on its own: the crew sets course for Dantooine, and the episode ends.
+25. Close the tab when you are done.
+
+### F. Backup if the preview does not open
+26. Open **File Explorer**, click the address bar, paste `C:\dev\kotor3\KotOR.js\scripts\kotor3`, press **Enter**, and double-click **start-local**. If Windows warns you, click **More info**, then **Run anyway**. Leave the black window open; Chrome opens the launcher after about 30 seconds. Then go on from step 4.
+
+### Tell Claude
+Which steps did not match what you saw, especially steps 3, 9, 14, 15 and 22 (these could not be fully automated in Chrome).

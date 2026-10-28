@@ -28,12 +28,13 @@ export class JournalEntry {
 
   }
 
+  // KOTOR III Phase 2: getValue() returns a mod's own text, or the game's string by id, as before.
   getName(): string {
-    return this.category.name.getTLKValue();
+    return this.category?.name?.getValue() ?? '';
   }
 
   getEntryText(): string {
-    return this.entry.text.getTLKValue();
+    return this.entry?.text?.getValue() ?? '';
   }
 
   load(): void {

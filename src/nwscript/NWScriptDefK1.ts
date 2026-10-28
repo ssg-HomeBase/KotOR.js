@@ -6397,7 +6397,10 @@ NWScriptDefK1.Actions = {
     type: NWScriptDataType.VOID,
     args: [NWScriptDataType.STRING, NWScriptDataType.STRING, NWScriptDataType.STRING, NWScriptDataType.STRING, NWScriptDataType.STRING, NWScriptDataType.STRING, NWScriptDataType.STRING, NWScriptDataType.STRING],
     action: function(this: NWScriptInstance, args: [string, string, string, string, string, string, string, string]){
-      GameState.LoadModule(args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7]);
+      // KOTOR III Phase 2 (finding 31): called from a line's script, the move waits until that line has been read.
+      GameState.CutsceneManager.runAfterLine(() => {
+        GameState.LoadModule(args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7]);
+      });
     }
   },
   510:{

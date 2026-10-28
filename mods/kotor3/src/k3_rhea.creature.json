@@ -1,0 +1,25 @@
+{
+  "resref": "k3_rhea",
+  "tag": "k3_rhea",
+  "firstName": "Rhea",
+  "lastName": "Vex",
+  "comment": "KOTOR III (fan): Mandalorian scout sent by the clans; joins as navigator. Uses the player's own KOTOR II body model by appearance.2da row number only.",
+  "conversation": "k3_rhea",
+  "appearanceRow": 351,
+  "appearanceNote": "appearance.2da row 351 in the player's KOTOR II (Alien_Mandalorian_02).",
+  "gender": 1,
+  "race": 6,
+  "factionId": 5,
+  "hitPoints": 20,
+  "abilities": {
+    "Str": 10,
+    "Dex": 12,
+    "Con": 10,
+    "Int": 14,
+    "Wis": 12,
+    "Cha": 14
+  },
+  "classId": 0,
+  "classLevel": 1,
+  "plot": true
+}

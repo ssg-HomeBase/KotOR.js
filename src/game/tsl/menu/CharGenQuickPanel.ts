@@ -53,6 +53,7 @@ export class CharGenQuickPanel extends K1_CharGenQuickPanel {
         GameState.CharGenManager.selectedCreature.equipment.ARMOR = undefined;
         GameState.CharGenManager.selectedCreature.template.getFieldByLabel('Equip_ItemList').childStructs = [];
         GameState.GlobalVariableManager.Init();
+        GameState.JournalManager.ClearEntries(); // KOTOR III Phase 2: a new game starts with an empty journal
         GameState.PartyManager.PlayerTemplate = GameState.CharGenManager.selectedCreature.save();
         GameState.PartyManager.ActualPlayerTemplate = GameState.PartyManager.PlayerTemplate;
         GameState.PartyManager.AddPortraitToOrder(GameState.CharGenManager.selectedCreature.getPortraitResRef());

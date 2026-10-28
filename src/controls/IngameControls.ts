@@ -136,8 +136,10 @@ export class IngameControls {
           /**
            * Generate the export filename
            */
-          const count = (await GameFileSystem.readdir('')).filter( (file) => {
-            return !!file.match(/KotOR\d{4}.tga/);
+          // KOTOR III Phase 2: screenshots go to the app's own storage (Screenshots/), never the game folder.
+          await GameFileSystem.mkdir('Screenshots');
+          const count = (await GameFileSystem.readdir('Screenshots').catch((): string[] => [])).filter( (file) => {
+            return !!file.match(/(KotOR\d{4}|K2_\d{5})\.tga$/);
           }).length;
           const isK1 = GameState.GameKey == 'KOTOR';
           const ssName = isK1 ? 'KotOR' : 'K2_';
@@ -148,7 +150,7 @@ export class IngameControls {
           /**
            * Export the generated TGAObject as a TGA Image
            */
-          GameFileSystem.writeFile(ssFilename, await tga.toExportBuffer());
+          GameFileSystem.writeFile(`Screenshots/${ssFilename}`, await tga.toExportBuffer());
         };
       }
 

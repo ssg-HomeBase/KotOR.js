@@ -1,0 +1,120 @@
+{
+  "globals": [
+    {
+      "name": "K3_MET_SEREN",
+      "type": "Boolean"
+    },
+    {
+      "name": "K3_SIGNAL_STAGE",
+      "type": "Number"
+    },
+    {
+      "name": "K3_SEREN_JOINED",
+      "type": "Boolean"
+    },
+    {
+      "name": "K3_BRANNICK_TALKED",
+      "type": "Boolean"
+    },
+    {
+      "name": "K3_CLEARANCE",
+      "type": "Boolean"
+    },
+    {
+      "name": "K3_NAR_ARRIVED",
+      "type": "Boolean"
+    },
+    {
+      "name": "K3_RHEA_JOINED",
+      "type": "Boolean"
+    },
+    {
+      "name": "K3_SHIP_PAID",
+      "type": "Boolean"
+    },
+    {
+      "name": "K3_CORVA_MET",
+      "type": "Boolean"
+    },
+    {
+      "name": "K3_EPISODE_DONE",
+      "type": "Boolean"
+    }
+  ],
+  "quests": [
+    {
+      "tag": "k3_signal",
+      "name": "The Last Signal",
+      "priority": 1,
+      "comment": "KOTOR III (fan) Episode 1 main quest",
+      "xp": 0,
+      "entries": [
+        {
+          "id": 10,
+          "text": "A courier named Seren Vaux stopped me on the Citadel Station docks. She has carried a sealed recording from the Exile for three years, and she believes it is meant for me."
+        },
+        {
+          "id": 20,
+          "text": "Seren is coming with me on her courier shuttle. Before we can leave the station, the Telos Security Force officer on the docks has to clear our departure."
+        },
+        {
+          "id": 30,
+          "text": "Lieutenant Senn cleared Seren's shuttle for Nar Shaddaa. Wherever the Exile's trail leads, it starts there."
+        },
+        {
+          "id": 40,
+          "text": "We have landed on Nar Shaddaa. Seren's shuttle cannot make the long jump, so we need a navigator and a ship before we can follow the coordinates."
+        },
+        {
+          "id": 50,
+          "text": "The Far Lantern is ready, but the coordinates stop at the last beacon. The rest of the Exile's route is still locked inside the seal, so we are flying to Dantooine first, where Jedi are rebuilding the old enclave, to have it opened.",
+          "end": true
+        }
+      ]
+    },
+    {
+      "tag": "k3_navigator",
+      "name": "A Navigator Past the Charts",
+      "priority": 2,
+      "comment": "KOTOR III (fan) Episode 1 side quest: recruit Rhea Vex",
+      "xp": 0,
+      "entries": [
+        {
+          "id": 10,
+          "text": "Routes past the star charts are bought and sold on Nar Shaddaa. I need a navigator there who knows how to fly them."
+        },
+        {
+          "id": 20,
+          "text": "A Mandalorian scout has been asking about the old routes on the Refugee Landing Pad. She may be the navigator I am looking for."
+        },
+        {
+          "id": 30,
+          "text": "Rhea Vex, the Mandalorian scout, has joined us as navigator. She made it plain that her clans will hear everything she learns.",
+          "end": true
+        }
+      ]
+    },
+    {
+      "tag": "k3_ship",
+      "name": "A Ship That Will Not Turn Back",
+      "priority": 2,
+      "comment": "KOTOR III (fan) Episode 1 side quest: buy the Far Lantern",
+      "xp": 0,
+      "entries": [
+        {
+          "id": 10,
+          "text": "Seren's shuttle will not survive a jump past the charts. We need a long-range ship."
+        },
+        {
+          "id": 20,
+          "text": "Hesk Varo sold us the Far Lantern, an old long-range courier, and his mechanic is getting her ready. He also said a woman in grey was asking about Seren."
+        },
+        {
+          "id": 30,
+          "text": "The Far Lantern is fuelled and ready, and the coordinates from the recording are loaded.",
+          "end": true
+        }
+      ]
+    }
+  ]
+}

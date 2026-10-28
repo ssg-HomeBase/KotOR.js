@@ -85,6 +85,8 @@ export class CurrentGame {
 
         return rm_response;
       }else{
+        // KOTOR III Phase 2: gameinprogress lives in the browser's origin private file system
+        // (GameFileSystem routes it there); it is never created in the player's game folder.
         console.log(`CurrentGame.CleanGameInProgressFolder`, `Mode: BROWSER`);
         try{
           const directory_handle = await GameFileSystem.opendir_web(CurrentGame.gameinprogress_dir);
@@ -95,14 +97,12 @@ export class CurrentGame {
               }
             }
           }else if(create){
-            const directory_handle = await ApplicationProfile.directoryHandle.getDirectoryHandle(CurrentGame.gameinprogress_dir, { create: true });
-            console.log('exists', directory_handle);
+            await GameFileSystem.mkdir(CurrentGame.gameinprogress_dir);
           }
         }catch(e){
           console.error(e);
           if(create){
-            const directory_handle = await ApplicationProfile.directoryHandle.getDirectoryHandle(CurrentGame.gameinprogress_dir, { create: true });
-            console.log('exists', directory_handle);
+            await GameFileSystem.mkdir(CurrentGame.gameinprogress_dir);
           }
         }
         return true;

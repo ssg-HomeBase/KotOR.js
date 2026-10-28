@@ -16,11 +16,14 @@ debug.log
 docs/*
 !docs/STORY_BIBLE.md
 !docs/FEASIBILITY.md
+!docs/PHASE2.md
+!docs/EPISODE1.md
 coverage/
 scratch/
 research/*
 !research/R9_LOG.md
 !research/TEST_LOG.md
+!research/TEST_LOG_PHASE2.md
 .history/
 /extensions/
 .npm-cache/

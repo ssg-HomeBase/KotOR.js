@@ -1,0 +1,43 @@
+{
+  "resref": "k3_end",
+  "comment": "KOTOR III (fan) Episode 1 ending. The coordinates stop at the last beacon, so the crew sets course for Dantooine to have the rest of the seal opened before the long jump (story bible, Act I). Original writing for this fan project.",
+  "start": ["E0"],
+  "entries": [
+    {
+      "id": "E0",
+      "text": "This is it, then. A ship, a navigator, the coordinates, and a crew that came together in two days. I think she would have liked that.",
+      "replies": ["R0", "R1"]
+    },
+    {
+      "id": "E1",
+      "text": "Before anyone straps in, look at this. I have run the coordinates twice. They take us as far as the last beacon and then stop dead. Whatever comes after is still locked inside the seal.",
+      "speaker": "k3_rhea",
+      "replies": ["R3", "R4"]
+    },
+    {
+      "id": "E2",
+      "text": "Only that I waited three years for you to walk past my corner of the dock. Ask me again once we are past the charts.",
+      "replies": ["R2"]
+    },
+    {
+      "id": "E3",
+      "text": "And then sit in the dark guessing which way she turned? I did not spend a year chasing rumours to stall at a beacon. We open the rest of it first.",
+      "speaker": "k3_rhea",
+      "replies": ["R5"]
+    },
+    {
+      "id": "E4",
+      "text": "Then we start with Dantooine. There are Jedi there again, rebuilding the old enclave, and if anyone can open the rest of a Jedi's seal, it is them. The charts can wait a little longer.",
+      "script": "k3_ep_end",
+      "replies": []
+    }
+  ],
+  "replies": [
+    { "id": "R0", "text": "Everyone aboard. Time to go.", "next": "E1" },
+    { "id": "R1", "text": "Any regrets, Seren?", "next": "E2" },
+    { "id": "R2", "text": "Then let us not waste another minute.", "next": "E1" },
+    { "id": "R3", "text": "Then we need someone who can open the rest of the seal.", "next": "E4" },
+    { "id": "R4", "text": "Could we fly as far as the last beacon anyway?", "next": "E3" },
+    { "id": "R5", "text": "Agreed. Seren, where do we start?", "next": "E4" }
+  ]
+}

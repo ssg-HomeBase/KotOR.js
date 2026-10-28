@@ -29,7 +29,9 @@ export class GUIJournalItem extends GUIProtoItem {
 
   createControl(){
     try{
-      this.setText(this.node.category.name.getTLKValue());
+      // KOTOR III Phase 2 (finding 25): getName() gives a mod quest's own title or the game's string; getTLKValue()
+      // threw for mod quests (no string id), so the row was never built and the journal looked empty.
+      this.setText(this.node.getName());
       super.createControl();
     }catch(e){
       console.error(e);

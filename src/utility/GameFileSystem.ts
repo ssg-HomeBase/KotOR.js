@@ -37,6 +37,133 @@ const spleep = (time: number = 0) => {
  */
 export class GameFileSystem {
 
+  /**
+   * KOTOR III Phase 2: the player's game folder is only ever read.
+   * Everything the engine writes (saves, the in-progress module state, settings, screenshots)
+   * goes to the app's own storage instead:
+   *   - desktop app (Electron): <app.getPath('userData')>/game-data/<profile key>/
+   *   - browser: the origin private file system, /kotorjs-game-data/<profile key>/
+   * Reads of the folders below come from that storage too; root-level *.ini files are read from it
+   * when the app has written its own copy. Every other read comes from the game folder.
+   */
+  private static readonly USER_DATA_DIRS = new Set(['gameinprogress', 'saves', 'screenshots']);
+  /**
+   * Set to true by the game app (src/apps/game/states/AppState.ts initApp) before anything runs.
+   * While true, nothing is ever written to the game folder. KotOR Forge leaves it false and keeps
+   * its own behaviour (it writes into the folder on purpose, e.g. compiling scripts into Override).
+   */
+  static gameFolderReadOnly: boolean = false;
+  /** Electron: absolute path of this profile's writable data folder. */
+  static userDataDirectory: string = '';
+  /** Browser: this profile's folder in the origin private file system. */
+  static userDataHandle: FileSystemDirectoryHandle | undefined;
+
+  static get userDataReady(): boolean {
+    return ApplicationProfile.ENV == ApplicationEnvironment.ELECTRON
+      ? !!this.userDataDirectory
+      : isUsableDirectoryHandle(this.userDataHandle);
+  }
+
+  private static userDataKey(): string {
+    const key = String(ApplicationProfile.profile?.key || ApplicationProfile.key || 'default').toLowerCase();
+    return key.replace(/[^a-z0-9_-]/g, '_') || 'default';
+  }
+
+  /** Must run before the game reads or writes saves. Creates the profile's data folder and its Saves folder. */
+  static async initUserDataStorage(): Promise<void> {
+    const key = this.userDataKey();
+    if(ApplicationProfile.ENV == ApplicationEnvironment.ELECTRON){
+      const base: string = await (window as any).electron?.getUserDataPath?.();
+      if(!base) throw new Error('GameFileSystem: the desktop app did not report its user data folder');
+      const dir = path.join(base, 'game-data', key);
+      await new Promise<void>((resolve, reject) => {
+        fs.mkdir(path.join(dir, 'Saves'), { recursive: true }, (err) => err ? reject(err) : resolve());
+      });
+      this.userDataDirectory = dir;
+    }else{
+      const opfsRoot = await navigator.storage.getDirectory();
+      const top = await opfsRoot.getDirectoryHandle('kotorjs-game-data', { create: true });
+      const handle = await top.getDirectoryHandle(key, { create: true });
+      await handle.getDirectoryHandle('Saves', { create: true });
+      this.userDataHandle = handle;
+    }
+    console.log('GameFileSystem: writable data lives outside the game folder', this.describeUserDataLocation());
+  }
+
+  static describeUserDataLocation(): string {
+    if(ApplicationProfile.ENV == ApplicationEnvironment.ELECTRON) return this.userDataDirectory;
+    return this.userDataHandle ? `origin private file system: kotorjs-game-data/${this.userDataKey()}` : '';
+  }
+
+  /** True when this relative path belongs to the app's own storage (saves, in-progress state, screenshots). */
+  static isUserDataPath(filepath: string): boolean {
+    const parts = this.splitRelativePath(filepath);
+    return parts.length > 0 && this.USER_DATA_DIRS.has(parts[0].toLowerCase());
+  }
+
+  private static isRootIniPath(filepath: string): boolean {
+    const parts = this.splitRelativePath(filepath);
+    return parts.length == 1 && /\.ini$/i.test(parts[0]);
+  }
+
+  /** Which storage a read of this path should use. */
+  private static async readsFromUserData(filepath: string): Promise<boolean> {
+    if(!this.gameFolderReadOnly) return false;
+    if(this.isUserDataPath(filepath)) return true;
+    if(this.isRootIniPath(filepath) && this.userDataReady){
+      return await this.userDataExists(filepath);
+    }
+    return false;
+  }
+
+  private static requireUserData(filepath: string){
+    if(!this.userDataReady){
+      throw new Error(`GameFileSystem: refusing to touch "${filepath}" before the app's own storage is ready (the game folder is never written)`);
+    }
+  }
+
+  /** Electron: absolute path for a relative path, in the user data folder or the game folder. */
+  private static electronPath(filepath: string, userData: boolean): string {
+    if(userData){
+      this.requireUserData(filepath);
+      return path.join(this.userDataDirectory, ...this.splitRelativePath(filepath));
+    }
+    return path.join(ApplicationProfile.directory, filepath);
+  }
+
+  private static async userDataExists(filepath: string): Promise<boolean> {
+    if(ApplicationProfile.ENV == ApplicationEnvironment.ELECTRON){
+      return await new Promise<boolean>((resolve) => {
+        fs.stat(this.electronPath(filepath, true), (err) => resolve(!err));
+      });
+    }
+    try{
+      const parts = this.splitRelativePath(filepath);
+      const name = parts.pop();
+      const dir = await this.resolvePathDirectoryHandle(parts.join('/'), false, true);
+      if(!dir || !name) return false;
+      for await (const entry of dir.values()){
+        if(entry.name.toLowerCase() === name.toLowerCase()) return true;
+      }
+      return false;
+    }catch{
+      return false;
+    }
+  }
+
+  /** Forget cached browser directory handles under a path (after it is removed). */
+  private static forgetDirectoryCache(userData: boolean, dirPath: string){
+    const prefix = this.cacheKey(userData, this.splitRelativePath(dirPath).join('/')).toLowerCase();
+    for(const key of [...this.directoryCache.keys()]){
+      const k = key.toLowerCase();
+      if(k === prefix || k.startsWith(prefix + '/')) this.directoryCache.delete(key);
+    }
+  }
+
+  private static cacheKey(userData: boolean, relPath: string): string {
+    return (userData ? 'u:' : 'g:') + relPath;
+  }
+
   private static normalizePath(filepath: string){
     filepath = String(filepath ?? '').trim();
     filepath = filepath.replace(/\\/g, '/');
@@ -58,7 +185,10 @@ export class GameFileSystem {
     return this.normalizePath(filepath).split('/').filter(Boolean).map((part) => this.decodePathSegment(part));
   }
 
-  private static getRootDirectoryHandle(): FileSystemDirectoryHandle | undefined {
+  private static getRootDirectoryHandle(userData: boolean = false): FileSystemDirectoryHandle | undefined {
+    if(userData){
+      return isUsableDirectoryHandle(this.userDataHandle) ? this.userDataHandle : undefined;
+    }
     const candidates = [
       ApplicationProfile.directoryHandle,
       ApplicationProfile.profile?.directory_handle,
@@ -73,9 +203,11 @@ export class GameFileSystem {
 
   //filepath should be relative to the rootDirectoryPath or ApplicationProfile.directory
   static async open(filepath: string, mode: 'r'|'w' = 'r'): Promise<any> {
+    const userData = await this.readsFromUserData(filepath);
     if(ApplicationProfile.ENV == ApplicationEnvironment.ELECTRON){
+      const absPath = this.electronPath(filepath, userData);
       return new Promise<number>( (resolve, reject) => {
-        fs.open(path.join(ApplicationProfile.directory, filepath), (err, fd) => {
+        fs.open(absPath, (err, fd) => {
           if(err){
             console.error(err);
             reject(err);
@@ -89,7 +221,7 @@ export class GameFileSystem {
       filepath = this.normalizePath(filepath);
       const dirs = filepath.split('/');
       const filename = dirs.pop();
-      const dirHandle = await this.resolveFilePathDirectoryHandle(filepath);
+      const dirHandle = await this.resolveFilePathDirectoryHandle(filepath, userData);
       if(dirHandle){
         try {
           const file = await dirHandle.getFileHandle(filename, {
@@ -126,22 +258,84 @@ export class GameFileSystem {
     }else{
       if(!(handle)) throw new Error('No file handle supplied!');
       
-      if(!(handle instanceof FileSystemFileHandle)) throw new Error('FileSystemFileHandle expected but one was not supplied!');
+      // KOTOR III Phase 2: also accepts the read-only stand-in built from the older folder picker (FileListDirectory.ts).
+      if(!(handle instanceof FileSystemFileHandle) && typeof (handle as any).getFile !== 'function') throw new Error('FileSystemFileHandle expected but one was not supplied!');
       
       if(!(output instanceof Uint8Array)) throw new Error('No output buffer supplied!');
 
-      let file = GameFileSystem.fileSnapshotCache.get(handle);
-      if(!file){
-        file = await handle.getFile();
-        if(file){
-          GameFileSystem.fileSnapshotCache.set(handle, file);
+      const fileHandle = handle as FileSystemFileHandle;
+      await GameFileSystem.withReadRetry(fileHandle, async () => {
+        let file = GameFileSystem.fileSnapshotCache.get(fileHandle);
+        if(!file){
+          file = await fileHandle.getFile();
+          if(file){
+            GameFileSystem.fileSnapshotCache.set(fileHandle, file);
+          }
         }
-      }
-      if(!file) throw new Error('Failed to read file from handle!');
+        if(!file) throw new Error('Failed to read file from handle!');
 
-      let blob = file.slice(position, position + length);
-      let arrayBuffer = await blob.arrayBuffer();
-      output.set(new Uint8Array(arrayBuffer), offset);
+        let blob = file.slice(position, position + length);
+        let arrayBuffer = await blob.arrayBuffer();
+        output.set(new Uint8Array(arrayBuffer), offset);
+      });
+    }
+  }
+
+  /**
+   * KOTOR III Phase 2 (finding 29): a game file the browser cannot read (a cloud-only Google Drive or OneDrive file,
+   * say) used to throw once and leave the game on the loading screen for good. Now the read is tried again a few
+   * times with a fresh copy of the file, and if it still fails the player gets a message saying which file and what
+   * to do, with a Reload button.
+   */
+  static readonly READ_RETRY_DELAYS_MS = [400, 1500, 4000];
+  static async withReadRetry<T>(fileHandle: FileSystemFileHandle, attempt: () => Promise<T>): Promise<T> {
+    let lastError: any;
+    for(let i = 0; i <= GameFileSystem.READ_RETRY_DELAYS_MS.length; i++){
+      try{
+        return await attempt();
+      }catch(e){
+        lastError = e;
+        GameFileSystem.fileSnapshotCache.delete(fileHandle);
+        const wait = GameFileSystem.READ_RETRY_DELAYS_MS[i];
+        if(wait === undefined) break;
+        console.warn(`GameFileSystem: reading ${fileHandle?.name} failed, trying again in ${wait} ms`, e);
+        await new Promise((resolve) => setTimeout(resolve, wait));
+      }
+    }
+    GameFileSystem.reportReadFailure(fileHandle?.name, lastError);
+    throw lastError;
+  }
+
+  private static readFailureShown = false;
+  static reportReadFailure(fileName: string = '', error?: any){
+    console.error(`GameFileSystem: could not read ${fileName}`, error);
+    if(GameFileSystem.readFailureShown || typeof document === 'undefined') return;
+    GameFileSystem.readFailureShown = true;
+    try{
+      const box = document.createElement('div');
+      box.className = 'k3-read-failure';
+      box.setAttribute('role', 'alertdialog');
+      box.style.cssText = 'position:fixed;inset:0;z-index:2147483647;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.75);font:16px/1.5 system-ui,sans-serif;';
+      const panel = document.createElement('div');
+      panel.style.cssText = 'max-width:560px;margin:16px;padding:24px;border:1px solid #2fb0a0;border-radius:8px;background:#0b1416;color:#e8f2f0;';
+      const title = document.createElement('h2');
+      title.textContent = 'A game file could not be read';
+      title.style.cssText = 'margin:0 0 12px;font-size:20px;';
+      const text = document.createElement('p');
+      text.textContent = `The browser could not read "${fileName || 'a file'}" from your KOTOR II folder, so the game cannot continue. ` +
+        'This usually means the folder is in Google Drive, OneDrive or another cloud folder and the file is not downloaded to this computer. ' +
+        'Copy the folder to this computer (for example C:\\Games), or in File Explorer right-click it and make it available offline. ' +
+        'Then press Reload and pick the folder again.';
+      text.style.cssText = 'margin:0 0 16px;';
+      const reload = document.createElement('button');
+      reload.textContent = 'Reload';
+      reload.style.cssText = 'padding:8px 20px;font:inherit;border:1px solid #2fb0a0;border-radius:4px;background:#13383a;color:#e8f2f0;cursor:pointer;';
+      reload.addEventListener('click', () => window.location.reload());
+      panel.append(title, text, reload);
+      box.append(panel);
+      document.body.append(box);
+    }catch(e){
+      console.error(e);
     }
   }
 
@@ -162,8 +356,9 @@ export class GameFileSystem {
   static async readFile(filepath: string, options: any = {}): Promise<Uint8Array> {
     // console.log('readFile', filepath);
     if(ApplicationProfile.ENV == ApplicationEnvironment.ELECTRON){
+      const absPath = this.electronPath(filepath, await this.readsFromUserData(filepath));
       return new Promise<Uint8Array>( (resolve, reject) => {
-        fs.readFile(path.join(ApplicationProfile.directory, filepath), options, (err, buffer) => {
+        fs.readFile(absPath, options, (err, buffer) => {
           if(err){
             reject(err);
             return;
@@ -174,17 +369,28 @@ export class GameFileSystem {
     }else{
       const file = await this.open(filepath);
       if(!file) throw new Error('Failed to read file');
-      
-      let handle = await file.getFile();
-      return new Uint8Array( await handle.arrayBuffer() );
+
+      return await GameFileSystem.withReadRetry(file, async () => {
+        let handle = await file.getFile();
+        return new Uint8Array( await handle.arrayBuffer() );
+      });
     }
   }
 
   //filepath should be relative to the rootDirectoryPath or ApplicationProfile.directory
+  // KOTOR III Phase 2: in the game app every write goes to the app's own storage, never the game folder.
   static async writeFile(filepath: string, data: Uint8Array): Promise<boolean> {
+    const userData = this.gameFolderReadOnly;
     if(ApplicationProfile.ENV == ApplicationEnvironment.ELECTRON){
+      let absPath: string;
+      try{
+        absPath = this.electronPath(filepath, userData);
+      }catch(e){
+        console.error(e);
+        return false;
+      }
       return new Promise<boolean>((resolve) => {
-        fs.writeFile(path.join(ApplicationProfile.directory, filepath), data, (err) => {
+        fs.writeFile(absPath, data, (err) => {
           resolve(!err);
         });
       });
@@ -199,19 +405,23 @@ export class GameFileSystem {
         return false;
       }
 
-      const root = this.getRootDirectoryHandle();
+      if(userData) this.requireUserData(filepath);
+      const root = this.getRootDirectoryHandle(userData);
       if(!root){
-        console.error('GameFileSystem.writeFile: no game directory handle');
+        console.error('GameFileSystem.writeFile: no writable directory handle');
         return false;
       }
 
-      const granted = await this.validateDirectoryHandle(root);
-      if(!granted){
-        console.error('GameFileSystem.writeFile: write permission denied');
-        return false;
+      if(!userData){
+        // KotOR Forge only: it writes into the game folder on purpose.
+        const granted = await this.validateWritableDirectoryHandle(root);
+        if(!granted){
+          console.error('GameFileSystem.writeFile: write permission denied');
+          return false;
+        }
       }
 
-      const dirHandle = await this.resolveFilePathDirectoryHandle(filepath);
+      const dirHandle = await this.resolveFilePathDirectoryHandle(filepath, userData);
       if(!dirHandle){
         console.error('GameFileSystem.writeFile: failed to locate directory', filepath);
         return false;
@@ -249,18 +459,19 @@ export class GameFileSystem {
   static async readdir(
     dirpath: string, options: IGameFileSystemReadDirOptions = {}, files: any[] = []
   ): Promise<string[]> {
+    const userData = this.gameFolderReadOnly && this.isUserDataPath(dirpath);
     if(ApplicationProfile.ENV == ApplicationEnvironment.ELECTRON){
-      return await this.readdir_fs(dirpath, options, files);
+      return await this.readdir_fs(dirpath, options, files, undefined, userData);
     }else{
-      return await this.readdir_web(dirpath, options, files);
+      return await this.readdir_web(dirpath, options, files, '', userData);
     }
   }
 
-  private static async readdir_web(pathOrHandle: string|FileSystemDirectoryHandle = '', opts: any = {},  files: any[] = [], dirbase: string = ''){
+  private static async readdir_web(pathOrHandle: string|FileSystemDirectoryHandle = '', opts: any = {},  files: any[] = [], dirbase: string = '', userData: boolean = false){
     try{
       if(typeof pathOrHandle === 'string'){
         const dirPath = this.normalizePath(pathOrHandle as string);
-        pathOrHandle = await this.resolvePathDirectoryHandle(pathOrHandle);
+        pathOrHandle = await this.resolvePathDirectoryHandle(pathOrHandle, false, userData);
         if(!pathOrHandle) throw new Error('Failed to locate directory inside game folder: '+dirPath);
         // Paths must stay relative to the game root. Handle.name is only the last segment
         // (e.g. "000001 - AUTOSAVE"), which would make nested reads miss Saves/.
@@ -302,7 +513,7 @@ export class GameFileSystem {
           const subdirPromises = directoryEntries.map(async (entry) => {
             const newdirbase = path.join(dirbase, entry.name);
             const subdirFiles: string[] = [];
-            await this.readdir_web(entry, opts, subdirFiles, newdirbase);
+            await this.readdir_web(entry, opts, subdirFiles, newdirbase, userData);
             return subdirFiles;
           });
 
@@ -329,8 +540,9 @@ export class GameFileSystem {
   }
 
   private static async isFSDirectory(resource_path: string = ''): Promise<boolean> {
+    const absPath = this.electronPath(resource_path, await this.readsFromUserData(resource_path));
     return new Promise<boolean>( (resolve, reject) => {
-      fs.stat(path.join(ApplicationProfile.directory, resource_path), (err, stats) => {
+      fs.stat(absPath, (err, stats) => {
         if(err){
           console.error(err);
           reject();
@@ -341,12 +553,12 @@ export class GameFileSystem {
     });
   }
 
-  private static async readdir_fs(resource_path: string = '', opts: IGameFileSystemReadDirOptions = {}, files: any[] = [], depthState?: any): Promise<string[]> {
+  private static async readdir_fs(resource_path: string = '', opts: IGameFileSystemReadDirOptions = {}, files: any[] = [], depthState?: any, userData: boolean = false): Promise<string[]> {
     if(typeof depthState === 'undefined'){
       depthState = { folder: resource_path, depth: 0 };
     }
     const currentDepth: number = depthState.depth;
-    const dir_path = path.join(ApplicationProfile.directory, resource_path);
+    const dir_path = this.electronPath(resource_path, userData);
 
     return new Promise<string[]>((resolve, reject) => {
       fs.readdir(dir_path, { withFileTypes: true }, async (err, dir_files: fs.Dirent[]) => {
@@ -371,7 +583,7 @@ export class GameFileSystem {
               if(!!opts.recursive){
                 const subFiles: string[] = [];
                 subdirPromises.push(
-                  this.readdir_fs(file_path, opts, subFiles, { ...depthState, depth: currentDepth + 1 })
+                  this.readdir_fs(file_path, opts, subFiles, { ...depthState, depth: currentDepth + 1 }, userData)
                 );
               }else{
                 files.push(file_path);
@@ -391,11 +603,18 @@ export class GameFileSystem {
     });
   }
 
+  // KOTOR III Phase 2: in the game app folders are only ever created in the app's own storage.
   static async mkdir(dirPath: string, opts: IGameFileSystemReadDirOptions = {}){
     return new Promise<boolean>( async (resolve, reject) => {
       dirPath = dirPath.trim();
+      const userData = this.gameFolderReadOnly;
+      if(userData && !this.userDataReady){
+        console.error(`GameFileSystem.mkdir: refusing "${dirPath}" before the app storage is ready`);
+        resolve(false);
+        return;
+      }
       if(ApplicationProfile.ENV == ApplicationEnvironment.ELECTRON){
-        fs.mkdir(path.join(ApplicationProfile.directory, dirPath), { recursive: !!opts.recursive }, (err) => {
+        fs.mkdir(this.electronPath(dirPath, userData), { recursive: !!opts.recursive }, (err) => {
           if(err){
             console.error(err);
             resolve(false);
@@ -405,14 +624,14 @@ export class GameFileSystem {
         });
       }else{
         if(dirPath.length){
-          const dirs = dirPath.split(path.sep);
-          const cacheKey = dirs.join('/');
+          const dirs = this.splitRelativePath(dirPath);
+          const cacheKey = this.cacheKey(userData, dirs.join('/'));
           if(this.directoryCache.has(cacheKey)){
             resolve(true);
             return;
           }
           try{
-            let currentDirHandle = ApplicationProfile.directoryHandle;
+            let currentDirHandle = this.getRootDirectoryHandle(userData);
             for(let i = 0; i < dirs.length; i++){
               const canCreate = (i === dirs.length - 1) || !!opts.recursive;
               currentDirHandle = await currentDirHandle.getDirectoryHandle(dirs[i], { create: canCreate });
@@ -420,7 +639,7 @@ export class GameFileSystem {
                 resolve(false);
                 return;
               }
-              const partialKey = dirs.slice(0, i + 1).join('/');
+              const partialKey = this.cacheKey(userData, dirs.slice(0, i + 1).join('/'));
               this.directoryCache.set(partialKey, currentDirHandle);
             }
             resolve(true);
@@ -437,13 +656,21 @@ export class GameFileSystem {
     });
   }
 
+  // KOTOR III Phase 2: in the game app folders are only ever removed from the app's own storage.
   static async rmdir(dirPath: string, opts: IGameFileSystemReadDirOptions = {}){
     return new Promise<boolean>( async (resolve, reject) => {
       dirPath = dirPath.trim();
+      const userData = this.gameFolderReadOnly;
+      if((userData && !this.userDataReady) || !this.splitRelativePath(dirPath).length){
+        console.error(`GameFileSystem.rmdir: refusing "${dirPath}"`);
+        resolve(false);
+        return;
+      }
       if(ApplicationProfile.ENV == ApplicationEnvironment.ELECTRON){
-        console.log(`fs.rmdir`, path.join(ApplicationProfile.directory, dirPath));
+        const absPath = this.electronPath(dirPath, userData);
+        console.log(`fs.rmdir`, absPath);
         fs.rmdir(
-          path.join(ApplicationProfile.directory, dirPath), 
+          absPath,
           {
             recursive: opts.recursive
           } as fs.RmDirOptions, 
@@ -459,20 +686,20 @@ export class GameFileSystem {
         );
       }else{
         try{
-          const details = path.parse(dirPath);
-          // let handle = await this.resolvePathDirectoryHandle(dirPath);
-          let parentHandle = await this.resolvePathDirectoryHandle(details.dir);
-          if(parentHandle == ApplicationProfile.directoryHandle) resolve(false);
+          const parts = this.splitRelativePath(dirPath);
+          const name = parts.pop();
+          let parentHandle = await this.resolvePathDirectoryHandle(parts.join('/'), false, userData);
           if(parentHandle){
             for await (const entry of parentHandle.values()) {
               if(entry.kind == 'file') continue;
-              if(entry.name.toLowerCase() != details.name.toLowerCase()) continue;
+              if(entry.name.toLowerCase() != name.toLowerCase()) continue;
               await parentHandle.removeEntry(entry.name, {
                 recursive: opts.recursive
               });
               break;
             }
           }
+          this.forgetDirectoryCache(userData, dirPath);
           resolve(true);
           return;
         }catch(e){
@@ -486,7 +713,7 @@ export class GameFileSystem {
 
   static async opendir_web(dirPath: string = ''): Promise<FileSystemDirectoryHandle|undefined> {
     try{
-      return await this.resolvePathDirectoryHandle(dirPath);
+      return await this.resolvePathDirectoryHandle(dirPath, false, await this.readsFromUserData(dirPath));
     }catch{
       return undefined;
     }
@@ -494,8 +721,17 @@ export class GameFileSystem {
 
   static exists(dirOrFilePath: string): Promise<boolean> {
     return new Promise<boolean>( async (resolve, reject) => {
+      const userData = await this.readsFromUserData(dirOrFilePath);
       if(ApplicationProfile.ENV == ApplicationEnvironment.ELECTRON){
-        fs.stat(path.join(ApplicationProfile.directory, dirOrFilePath), (err, stats) => {
+        let absPath: string;
+        try{
+          absPath = this.electronPath(dirOrFilePath, userData);
+        }catch(e){
+          console.error(e);
+          resolve(false);
+          return;
+        }
+        fs.stat(absPath, (err, stats) => {
           if(err){
             console.log(dirOrFilePath);
             console.error(err);
@@ -509,7 +745,7 @@ export class GameFileSystem {
         const details = path.parse(dirOrFilePath);
         try{
           if(details.ext){
-            let handle = await this.resolveFilePathDirectoryHandle(dirOrFilePath);
+            let handle = await this.resolveFilePathDirectoryHandle(dirOrFilePath, userData);
             if(handle){
               let fileHandle = await handle.getFileHandle(details.base);
               if(fileHandle){
@@ -524,7 +760,7 @@ export class GameFileSystem {
               return;
             }
           }else{
-            let handle = await this.resolvePathDirectoryHandle(dirOrFilePath);
+            let handle = await this.resolvePathDirectoryHandle(dirOrFilePath, false, userData);
             if(handle){
               resolve(true);
               return;
@@ -543,11 +779,14 @@ export class GameFileSystem {
     });
   }
 
+  // KOTOR III Phase 2: in the game app files are only ever deleted from the app's own storage.
   static async unlink(handleOrPath: string|FileSystemFileHandle){
+    const userData = this.gameFolderReadOnly;
     if(ApplicationProfile.ENV == ApplicationEnvironment.ELECTRON){
+      const absPath = this.electronPath(handleOrPath as string, userData);
       return new Promise<void>( (resolve, reject) => {
         try{
-          fs.unlink(handleOrPath as string, () => {
+          fs.unlink(absPath, () => {
             resolve();
             return;
           })
@@ -558,15 +797,16 @@ export class GameFileSystem {
         }
       })
     }else{
-      if(handleOrPath instanceof FileSystemFileHandle && webHandleHasRemove){
+      if(handleOrPath instanceof FileSystemFileHandle && webHandleHasRemove && !userData){
         //@ts-ignore
         await handleOrPath.remove();
         return;
       }
       if(typeof handleOrPath === 'string'){
+        if(userData) this.requireUserData(handleOrPath);
         const normalized = this.normalizePath(handleOrPath);
         const details = path.parse(normalized);
-        const parentHandle = await this.resolveFilePathDirectoryHandle(normalized);
+        const parentHandle = await this.resolveFilePathDirectoryHandle(normalized, userData);
         if(parentHandle) await parentHandle.removeEntry(details.base);
       }else{
         throw new Error('unlink: supply a path string in web mode, not a FileSystemFileHandle');
@@ -603,11 +843,12 @@ export class GameFileSystem {
     }
   }
 
-  private static async resolvePathDirectoryHandle(filepath: string, parent = false): Promise<FileSystemDirectoryHandle> {
-    const root = this.getRootDirectoryHandle();
+  private static async resolvePathDirectoryHandle(filepath: string, parent = false, userData = false): Promise<FileSystemDirectoryHandle> {
+    const root = this.getRootDirectoryHandle(userData);
     if(root){
       const dirs = this.splitRelativePath(filepath);
-      const cacheKey = dirs.join('/');
+      if(!dirs.length) return root;
+      const cacheKey = this.cacheKey(userData, dirs.join('/'));
       if(this.directoryCache.has(cacheKey)){
         const cached = this.directoryCache.get(cacheKey)!;
         if(!parent) return cached;
@@ -621,7 +862,7 @@ export class GameFileSystem {
         let currentDirHandle = root;
         for(let i = 0, len = dirs.length; i < len; i++){
           lastDirectoryHandle = currentDirHandle;
-          const partialKey = dirs.slice(0, i + 1).join('/');
+          const partialKey = this.cacheKey(userData, dirs.slice(0, i + 1).join('/'));
           if(this.directoryCache.has(partialKey)){
             currentDirHandle = this.directoryCache.get(partialKey)!;
             continue;
@@ -661,12 +902,13 @@ export class GameFileSystem {
   static directoryInflight: Map<string, Promise<FileSystemDirectoryHandle>> = new Map();
   private static fileSnapshotCache = new WeakMap<FileSystemFileHandle, File>();
 
-  private static async resolveFilePathDirectoryHandle(filepath: string): Promise<FileSystemDirectoryHandle> {
-    const root = this.getRootDirectoryHandle();
+  private static async resolveFilePathDirectoryHandle(filepath: string, userData = false): Promise<FileSystemDirectoryHandle> {
+    const root = this.getRootDirectoryHandle(userData);
     if(root){
       const dirs = this.splitRelativePath(filepath);
       dirs.pop(); // remove filename
-      const cacheKey = dirs.join('/');
+      if(!dirs.length) return root;
+      const cacheKey = this.cacheKey(userData, dirs.join('/'));
       if(this.directoryCache.has(cacheKey)){
         return this.directoryCache.get(cacheKey)!;
       }
@@ -676,7 +918,7 @@ export class GameFileSystem {
       const promise = (async () => {
         let currentDirHandle = root;
         for(let i = 0, len = dirs.length; i < len; i++){
-          const partialKey = dirs.slice(0, i + 1).join('/');
+          const partialKey = this.cacheKey(userData, dirs.slice(0, i + 1).join('/'));
           if(this.directoryCache.has(partialKey)){
             currentDirHandle = this.directoryCache.get(partialKey)!;
             continue;
@@ -710,17 +952,31 @@ export class GameFileSystem {
     return;
   }
 
+  // KOTOR III Phase 2: the game folder is opened read-only.
   static async initializeGameDirectory(){
     if(ApplicationProfile.ENV == ApplicationEnvironment.ELECTRON){
       ApplicationProfile.directory = ApplicationProfile.directory;
     }else{
       ApplicationProfile.directoryHandle = await window.showDirectoryPicker({
-        mode: "readwrite"
+        mode: "read"
       });
     }
   }
 
   static async validateDirectoryHandle(handle: FileSystemDirectoryHandle){
+    try{
+      if ((await handle.queryPermission({ mode: 'read' })) === 'granted') {
+        return true;
+      }
+      return (await handle.requestPermission({ mode: 'read' })) === 'granted';
+    }catch(e){
+      console.error(e);
+      return false;
+    }
+  }
+
+  /** KotOR Forge only (gameFolderReadOnly is false there): it writes into the game folder on purpose. */
+  static async validateWritableDirectoryHandle(handle: FileSystemDirectoryHandle){
     try{
       if ((await handle.queryPermission({ mode: 'readwrite' })) === 'granted') {
         return true;
@@ -735,10 +991,10 @@ export class GameFileSystem {
   static async showRequestDirectoryDialog(){
     let handle = await window.showDirectoryPicker({
       id: ApplicationProfile.profile?.key,
-      mode: "readwrite"
+      mode: "read"
     });
     if(handle){
-      if ((await handle.requestPermission({ mode: 'readwrite' })) === 'granted') {
+      if ((await handle.requestPermission({ mode: 'read' })) === 'granted') {
         return handle;
       }
     }

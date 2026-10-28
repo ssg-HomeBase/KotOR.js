@@ -1,0 +1,25 @@
+{
+  "resref": "k3_senn",
+  "tag": "k3_senn",
+  "firstName": "Lieutenant",
+  "lastName": "Senn",
+  "comment": "KOTOR III (fan): Telos Security Force dock officer who clears departures. Uses the player's own KOTOR II body model by appearance.2da row number only.",
+  "conversation": "k3_senn",
+  "appearanceRow": 483,
+  "appearanceNote": "appearance.2da row 483 in the player's KOTOR II (TSF_Officer_Fem_01).",
+  "gender": 1,
+  "race": 6,
+  "factionId": 5,
+  "hitPoints": 20,
+  "abilities": {
+    "Str": 10,
+    "Dex": 12,
+    "Con": 10,
+    "Int": 14,
+    "Wis": 12,
+    "Cha": 14
+  },
+  "classId": 0,
+  "classLevel": 1,
+  "plot": true
+}

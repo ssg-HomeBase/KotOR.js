@@ -221,7 +221,7 @@ try {
       await sleep(500);
     }
     await waitFor(game, `!KotOR.CutsceneManager.active && KotOR.GameState.Mode === 1`, 'in-game mode before dialogue', 30000);
-    await evaluate(game, `(() => { const c = KotOR.GameState.module.area.creatures.find(c => (c.getTag() || '').toLowerCase() === ${JSON.stringify(NPC_TAG)});
+    await evaluate(game, `(() => { const c = KotOR.GameState.module.area.creatures.concat(KotOR.GameState.PartyManager.party.filter(Boolean)).find(c => (c.getTag() || '').toLowerCase() === ${JSON.stringify(NPC_TAG)});
       KotOR.CutsceneManager.startConversation(c.conversation, c, KotOR.GameState.PartyManager.party[0]); return true; })()`);
     const steps = [];
     let keyIdx = 0, lastEntry = '', lastReplies = '';
@@ -267,7 +267,9 @@ try {
   }
   result.coverage = { entries: [...seenEntries].sort(), replies: [...seenReplies].sort() };
   note(`coverage: entries ${result.coverage.entries.join(',')} | replies ${result.coverage.replies.join(',')}`);
-  result.passed = result.coverage.entries.length === 7 && result.coverage.replies.length === 7 && !!npc.hasModel;
+  // Phase 2 extended the scene (Seren now joins); Phase 1's 14 nodes must all still be played.
+  const p1 = (k) => [0, 1, 2, 3, 4, 5, 6].every((i) => result.coverage[k].includes(`${k === 'entries' ? 'E' : 'R'}${i}`));
+  result.passed = p1('entries') && p1('replies') && !!npc.hasModel;
   note(`RESULT: ${result.passed ? 'PASS' : 'FAIL'}`);
 } catch (e) {
   note(`ERROR: ${e.message}`);

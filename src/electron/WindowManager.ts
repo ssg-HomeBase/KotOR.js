@@ -1,4 +1,4 @@
-import { BrowserWindow, dialog } from "electron";
+import { BrowserWindow, dialog, app } from "electron";
 import { ApplicationWindow } from "./ApplicationWindow";
 import { LauncherWindow } from "./LauncherWindow";
 import * as path from "path";
@@ -63,6 +63,11 @@ export class WindowManager {
       }
     });
     
+    // KOTOR III Phase 2: the game keeps saves and in-progress state in the app's own data folder.
+    ipcMain.handle('get-user-data-path', () => {
+      return app.getPath('userData');
+    });
+
     ipcMain.handle('win-minimize', (event, data) => {
       let win = BrowserWindow.getFocusedWindow();
       if(win){

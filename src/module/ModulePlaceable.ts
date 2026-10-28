@@ -170,6 +170,8 @@ export class ModulePlaceable extends ModuleObject {
   }
 
   onClick(callee: ModuleObject){
+    // KOTOR III Phase 2 (finding 30): remembered so a switched-off conversation can answer with a short line.
+    GameState.CutsceneManager.notePlayerClick(this);
     GameState.getCurrentPlayer().actionUseObject( this );
   }
 

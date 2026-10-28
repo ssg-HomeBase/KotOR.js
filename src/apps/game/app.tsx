@@ -5,6 +5,7 @@ import { ModalGrantAccess } from "@/apps/game/components/modal-grant-access/moda
 import { ModalClickToBegin } from "@/apps/game/components/modal-click-to-begin/modalClickToBegin";
 import { CheatConsole } from "@/apps/game/components/cheat-console/cheatConsole";
 import { LoadingScreen } from "@/apps/common/components/loadingScreen/LoadingScreen";
+import { FullscreenButton } from "@/apps/game/components/fullscreen-button/fullscreenButton";
 
 export const GameApp = () => {
   const appContext = useApp();
@@ -31,6 +32,7 @@ export const GameApp = () => {
       {gameLoaded && showCheatConsole && (
         <CheatConsole />
       )}
+      <FullscreenButton />
       <LoadingScreen active={showLoadingScreen} message={loadingScreenMessage} backgroundURL={loadingScreenBackgroundURL} logoURL={loadingScreenLogoURL} />
     </>
   )

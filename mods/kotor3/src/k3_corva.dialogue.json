@@ -1,0 +1,77 @@
+{
+  "resref": "k3_corva",
+  "comment": "KOTOR III (fan) Nar Shaddaa landing pad. Corva, a watcher for the hidden scouts, warns the crew to turn back. Original writing for this fan project.",
+  "start": [
+    "E0"
+  ],
+  "entries": [
+    {
+      "id": "E0",
+      "text": "Leave the weapon holstered. Talking is all I came for. You and the courier have been asking about routes past the charts.",
+      "script": "k3_corva_met",
+      "replies": [
+        "R0",
+        "R1"
+      ]
+    },
+    {
+      "id": "E1",
+      "text": "Corva. I serve a lord with a very long memory. My name will not matter to you for much longer than this conversation.",
+      "replies": [
+        "R2"
+      ]
+    },
+    {
+      "id": "E2",
+      "text": "Go back to Telos. Give the recording to the station archive and forget the coordinates. What waits beyond the charts reaches far, and it has already noticed you.",
+      "replies": [
+        "R3",
+        "R4"
+      ]
+    },
+    {
+      "id": "E3",
+      "text": "Then my errand here is finished. When your signals start coming back unanswered, remember that someone offered you the way home first.",
+      "replies": []
+    },
+    {
+      "id": "E4",
+      "text": "Then you choose it with open eyes. I give one warning. My lord gives none.",
+      "replies": [
+        "R5"
+      ]
+    }
+  ],
+  "replies": [
+    {
+      "id": "R0",
+      "text": "Who sent you after us?",
+      "next": "E1"
+    },
+    {
+      "id": "R1",
+      "text": "Say what you came to say.",
+      "next": "E2"
+    },
+    {
+      "id": "R2",
+      "text": "And what does your lord want from us?",
+      "next": "E2"
+    },
+    {
+      "id": "R3",
+      "text": "We are not turning back.",
+      "next": "E3"
+    },
+    {
+      "id": "R4",
+      "text": "And if we refuse?",
+      "next": "E4"
+    },
+    {
+      "id": "R5",
+      "text": "Consider us warned. We are still going.",
+      "next": "E3"
+    }
+  ]
+}
