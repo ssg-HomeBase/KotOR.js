@@ -5,7 +5,7 @@ Phase 2, 2026-10-25. Text only, about 30 to 45 minutes. Runs as a mod on the pla
 ## Where it sits in the story bible
 
 - **Prologue: The Message (Citadel Station)**: Seren Vaux stops the player on the docks and offers the Exile's sealed recording (story bible section 4, "Prologue"). This episode grows Phase 1's scene into the prologue: Seren joins the player, an old spacer gives a lead, and a Telos Security Force officer clears the departure.
-- **Act I opening (Nar Shaddaa)**: "Find a navigator and a ship that can make the jump" (story bible, Planets table, Nar Shaddaa row). Rhea Vex, the Mandalorian scout the clans sent to learn where Revan went (story bible, Cast), becomes the navigator and joins. Darth Severis's hidden scouts (story bible, Cast) make their first move through a watcher. Dantooine, Tamsin Rho, VX-9 and Ashkar come in a later episode.
+- **Act I opening (Nar Shaddaa)**: "Find a navigator and a ship that can make the jump" (story bible, Planets table, Nar Shaddaa row). Rhea Vex, the Mandalorian scout the clans sent to learn where Revan went (story bible, Cast), becomes the navigator and joins. Darth Severis's hidden scouts (story bible, Cast) make their first move through a watcher. The episode ends with the course set for Dantooine (2026-10-27): the coordinates stop at the last beacon, and the story bible's Act I breaks the rest of the seal with the Lost Jedi there before the jump past the charts (Act II). Dantooine, Tamsin Rho, VX-9 and Ashkar come in a later episode.
 
 ## Areas (the player's own KOTOR II areas; no area file is shipped)
 
@@ -37,7 +37,7 @@ Party slots reuse KOTOR II's own slots (no new slots exist; research/R9_LOG.md s
 
 | Tag | Name | Stages |
 |---|---|---|
-| `k3_signal` | The Last Signal | 10 heard Seren out; 20 Seren joins, find a way off the station; 30 cleared to leave for Nar Shaddaa; 40 arrived on Nar Shaddaa; 50 the ship and navigator are ready (end) |
+| `k3_signal` | The Last Signal | 10 heard Seren out; 20 Seren joins, find a way off the station; 30 cleared to leave for Nar Shaddaa; 40 arrived on Nar Shaddaa; 50 the ship and navigator are ready; the coordinates stop at the last beacon, so the crew flies to Dantooine first to have the rest of the seal opened (end) |
 | `k3_navigator` | A Navigator Past the Charts | 10 a navigator who knows the routes past the charts can be found on Nar Shaddaa; 20 a Mandalorian scout has been asking about the old routes; 30 Rhea Vex joins as navigator (end) |
 | `k3_ship` | A Ship That Will Not Turn Back | 10 a long-range ship is needed; 20 Hesk Varo agreed to sell the *Far Lantern*; 30 the ship is ready (end) |
 
@@ -58,7 +58,7 @@ Rule for every conversation: the **first reply in every reply list is the main-p
 | 7 | `k3_rhea` | Rhea Vex | after navigator stage 20 (otherwise she waves the player off) | she has been mapping the Exile's route for her clan; she joins as navigator | `k3_rh_join` (navigator 30); condition `k3_c_nav20` |
 | 8 | `k3_hesk` | Hesk Varo | first visit; a "ready" opening when the ship is paid for, Rhea has joined and Corva was met; otherwise "come back with your navigator" | first visit: the *Far Lantern* is sold; he mentions a woman in grey asking about Seren. Ready visit: the ship is fuelled and the coordinates load | `k3_q_ship20`; `k3_ship_done` (ship 30, starts conversation 10); conditions `k3_c_ready`, `k3_c_shippaid` |
 | 9 | `k3_corva` | Corva | any time | she warns the crew that the dark beyond the charts has a long reach; the player refuses to turn back | `k3_corva_met`; ends with her leaving |
-| 10 | `k3_end` | Seren (Rhea speaks too) | started by `k3_ship_done` | the crew boards the *Far Lantern*; the episode ends on the jump | `k3_ep_end` (signal 50, `K3_EPISODE_DONE`) |
+| 10 | `k3_end` | Seren (Rhea speaks too) | started by `k3_ship_done` | the crew boards the *Far Lantern*; Rhea finds the coordinates stop at the last beacon, the rest of the route is still sealed, and Seren sets the course for Dantooine, where Jedi are rebuilding the old enclave (story bible, Planets and Act I); the episode ends there | `k3_ep_end` (signal 50, `K3_EPISODE_DONE`) |
 
 ## Playthrough order (the automated test follows it)
 
@@ -68,7 +68,7 @@ New Game (Quick Character) into `201tel` → Seren (joins) → Brannick → Senn
 
 - Original lines only; no KOTOR dialogue is quoted or paraphrased. All new text is compared by script with the player's own `dialog.tlk` (read in memory): 0 exact matches and 0 shared runs of 6 or more words.
 - Plain, spoken lines of at most about 40 words; the player character is never named.
-- Fan inventions in the dialogue (not lore): the Mandalorian clans once flew a few lanes past the charts, which Rhea now reads; the *Far Lantern*; Corva's unnamed lord.
+- Fan inventions in the dialogue (not lore): the Mandalorian clans once flew a few lanes past the charts, which Rhea now reads; the *Far Lantern*; Corva's unnamed lord; the coordinates stopping at the last beacon. The Jedi rebuilding the enclave on Dantooine are the story bible's (Planets table), not a new claim.
 - New lore claims need a URL and date in docs/STORY_BIBLE.md; this episode adds none (it uses the story bible's lore 2, 3 and 9 only through Seren's recording and Rhea's clan).
 
 ## Engine pieces this design needs (all in M1 or small additions on the branch)

@@ -1498,6 +1498,12 @@ export class GameState implements EngineContext {
   }
 
   static UpdateIngame(delta: number = 0){
+    // KOTOR III Phase 2 (finding 33): while a save is loading the old area is already gone for a few frames, and
+    // everything below (selectable objects, the area's tick) needs it.
+    if(!GameState.module?.area){
+      return;
+    }
+
     //Get Selectable Objects In Range
     GameState.ModuleObjectManager.TickSelectableObjects(delta);
 
@@ -1515,10 +1521,6 @@ export class GameState implements EngineContext {
     }
 
     //Handle Module Tick
-    // KOTOR III Phase 2 (finding 33): while a save is loading the old area is already gone for a few frames.
-    if(!GameState.module){
-      return;
-    }
     if(
       GameState.State == EngineState.PAUSED || GameState.MenuManager.activeModals.length
     ){
